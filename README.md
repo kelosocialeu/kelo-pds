@@ -1,64 +1,79 @@
 # Kelo PDS
 
-Production-oriented AT Protocol Personal Data Server configuration for Kelo Social, designed for deployment on Render.
+Configuration du Personal Data Server AT Protocol de Kelo Social, conçue pour fonctionner sur Render à partir du PDS officiel.
 
-## Goals
+## Objectifs
 
-- Run the official Bluesky/AT Protocol PDS image.
-- Keep the PDS fully interoperable with Bluesky and other AT Protocol clients.
-- Serve the PDS on `pds.kelosocial.eu` while allowing account handles such as `name.kelosocial.eu` through `PDS_SERVICE_HANDLE_DOMAINS`.
-- Require hCaptcha for account creation using the PDS native hCaptcha configuration.
-- Keep Kelo ID verification enforcement in Kelo Social only, never in the PDS.
-- Persist repositories, SQLite databases and blobs on a Render persistent disk.
-- Enable SMTP, federation crawling, rate limiting, Redis/Valkey scratch storage, health checks and production logging.
+- Utiliser l'image officielle Bluesky/AT Protocol PDS.
+- Rester compatible avec Bluesky et les autres clients AT Protocol.
+- Héberger le serveur sur `pds.kelosocial.eu`.
+- Permettre des handles comme `nom.kelosocial.eu`.
+- Utiliser le hCaptcha natif du PDS pour la création de comptes.
+- Garder la vérification Kelo ID uniquement dans Kelo Social, jamais dans le PDS.
+- Activer SMTP, fédération, rate limiting, protection SSRF, healthcheck et logs.
 
-## Important architecture note about age assurance
+## Méthode de déploiement recommandée actuellement
 
-AT Protocol account creation does not store a date of birth in `com.atproto.server.createAccount`. Bluesky's current age-assurance system is implemented at the Bluesky/AppView product layer. This repository therefore does **not** invent a non-standard PDS field that would break client compatibility.
+Le déploiement recommandé est maintenant **Render → Web Service → Docker**.
 
-Kelo's own registration UI may collect a declared date of birth / age category before calling the standard PDS account-creation endpoint. Bluesky and other clients remain free to apply their own age-assurance rules when the same account is used there.
+Le fichier `render.yaml` reste disponible pour un éventuel Blueprint plus tard, mais il n'est pas nécessaire pour le déploiement manuel.
 
-## Render layout
+Guide exact :
 
-The repository contains a Render Blueprint (`render.yaml`) for:
+```text
+docs/RENDER_WEB_SERVICE.md
+```
 
-1. `kelo-pds` — public Docker web service running the official PDS.
-2. `kelo-pds-cache` — Render Key Value (Valkey/Redis compatible) for shared PDS scratch/rate-limit state.
-3. A persistent disk mounted at `/pds` on the PDS web service.
+## Configuration Render Web Service
 
-The PDS listens on Render's `PORT` through `docker-entrypoint.sh`.
+- Repository : `kelosocialeu/kelo-pds`
+- Branch : `main`
+- Runtime : `Docker`
+- Dockerfile : `./Dockerfile`
+- Health check : `/xrpc/_health`
+- Port PDS : `10000`
 
-## Files
+Le `Dockerfile` utilise directement l'image officielle du PDS :
 
-- `Dockerfile` — pins the official PDS container image.
-- `docker-entrypoint.sh` — maps Render's `PORT` to `PDS_PORT`, validates required variables and creates persistent directories.
-- `render.yaml` — Render Blueprint.
-- `.env.example` — all variables to configure in Render.
-- `docs/RENDER_SETUP.md` — exact Render setup sequence.
-- `docs/DNS.md` — DNS requirements for PDS + `*.kelosocial.eu` handles.
-- `docs/SECURITY.md` — secrets, backups and production considerations.
-- `docs/AGE_AND_CAPTCHA.md` — compatibility rules for age declaration and hCaptcha.
+```text
+ghcr.io/bluesky-social/pds:0.4.219
+```
 
-## PDS image
+Aucun script de démarrage Kelo propriétaire n'est nécessaire : on conserve le comportement upstream du PDS.
 
-The deployment is pinned to `ghcr.io/bluesky-social/pds:0.4.219` so a deploy cannot unexpectedly upgrade the database format. Upgrade deliberately after reviewing upstream release notes.
+## Important : stockage Render
 
-## Persistent data
+Le PDS écrit ses données sous `/pds`.
 
-Everything important is written under `/pds`:
+Pour un simple test, un Web Service sans disque persistant peut démarrer, mais le filesystem Render est éphémère. Les comptes, dépôts et médias peuvent disparaître lors d'une reconstruction ou d'un redéploiement.
 
-- SQLite account/sequencer/cache databases
-- actor repositories
-- uploaded blobs
-- temporary blob files
+**Ne pas considérer un Web Service sans disque comme une installation de production.**
 
-Never run this deployment without the Render persistent disk attached to `/pds`.
+Pour de vrais utilisateurs, il faudra un stockage durable avant l'ouverture publique.
 
-## Federation defaults
+## Âge / Age Assurance
 
-The production defaults are the public AT Protocol network:
+AT Protocol ne prévoit pas de date de naissance dans `com.atproto.server.createAccount`. Bluesky applique son système d'Age Assurance au niveau produit/AppView.
 
-```env
+Kelo pourra donc demander l'âge ou la date de naissance dans son propre parcours d'inscription avant d'appeler l'API standard du PDS, sans ajouter de champ propriétaire au protocole.
+
+## hCaptcha
+
+Le PDS utilise ses variables natives :
+
+```text
+PDS_HCAPTCHA_SITE_KEY
+PDS_HCAPTCHA_SECRET_KEY
+PDS_HCAPTCHA_TOKEN_SALT
+```
+
+Cela évite d'inventer un proxy d'inscription incompatible avec AT Protocol.
+
+## Fédération
+
+Configuration réseau publique prévue :
+
+```text
 PDS_DID_PLC_URL=https://plc.directory
 PDS_BSKY_APP_VIEW_URL=https://api.bsky.app
 PDS_BSKY_APP_VIEW_DID=did:web:api.bsky.app
@@ -67,23 +82,36 @@ PDS_REPORT_SERVICE_URL=https://mod.bsky.app
 PDS_REPORT_SERVICE_DID=did:plc:ar7c4by46qjdydhdevvrndac
 ```
 
-## Health check
+## Fichiers
 
-Render should use:
+- `Dockerfile` — image officielle PDS épinglée.
+- `.env.example` — liste des variables à entrer dans Render.
+- `render.yaml` — Blueprint optionnel, non requis pour Web Service manuel.
+- `docs/RENDER_WEB_SERVICE.md` — déploiement manuel Render.
+- `docs/RENDER_SETUP.md` — ancien parcours Blueprint / référence complémentaire.
+- `docs/DNS.md` — DNS du PDS et des handles.
+- `docs/SECURITY.md` — secrets, sauvegardes et production.
+- `docs/AGE_AND_CAPTCHA.md` — âge et hCaptcha.
+
+## Secrets critiques
+
+Une fois de vrais comptes créés, sauvegarder de façon sécurisée :
+
+```text
+PDS_JWT_SECRET
+PDS_ADMIN_PASSWORD
+PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX
+PDS_DPOP_SECRET
+```
+
+En particulier, ne pas remplacer arbitrairement la clé PLC après création des identités.
+
+## Healthcheck
+
+Render doit utiliser :
 
 ```text
 /xrpc/_health
 ```
 
-A healthy PDS returns JSON containing its version.
-
-## Before first production account
-
-Treat these variables as permanent secrets once accounts exist:
-
-- `PDS_JWT_SECRET`
-- `PDS_ADMIN_PASSWORD`
-- `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX`
-- `PDS_DPOP_SECRET`
-
-Back them up securely. In particular, do not casually replace the PLC rotation key after identities have been created.
+Le PDS doit être considéré comme prêt uniquement lorsque ce point de contrôle répond correctement.
