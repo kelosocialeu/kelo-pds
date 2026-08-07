@@ -1,0 +1,9 @@
+.env
+.env.*
+!.env.example
+pds-data/
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.log
+.DS_Store
