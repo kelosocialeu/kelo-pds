@@ -70,15 +70,9 @@ services:
         generateValue: true
       - key: PDS_DPOP_SECRET
         generateValue: true
-      - key: PDS_HCAPTCHA_TOKEN_SALT
-        generateValue: true
 
       # These values must be entered during Blueprint creation.
       - key: PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX
-        sync: false
-      - key: PDS_HCAPTCHA_SITE_KEY
-        sync: false
-      - key: PDS_HCAPTCHA_SECRET_KEY
         sync: false
       - key: PDS_EMAIL_SMTP_URL
         sync: false
