@@ -1,18 +1,8 @@
-# Âge et hCaptcha
+# Âge et inscription
 
-## hCaptcha
+## CAPTCHA
 
-Le PDS officiel expose désormais les variables natives :
-
-```text
-PDS_HCAPTCHA_SITE_KEY
-PDS_HCAPTCHA_SECRET_KEY
-PDS_HCAPTCHA_TOKEN_SALT
-```
-
-Kelo PDS les active avec les clés fournies dans Render. Avec les inscriptions ouvertes (`PDS_INVITE_REQUIRED=false`), hCaptcha constitue la protection principale contre les créations automatisées de comptes.
-
-Les secrets hCaptcha restent exclusivement dans Render. Seule la site key est destinée à être exposée au navigateur lorsqu'un client affiche le challenge.
+hCaptcha est désactivé et retiré de la configuration de déploiement Kelo PDS. Les inscriptions OAuth restent ouvertes avec `PDS_INVITE_REQUIRED=false`.
 
 ## Âge : ne pas casser AT Protocol
 
