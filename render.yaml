@@ -78,3 +78,10 @@ services:
         sync: false
       - key: PDS_EMAIL_FROM_ADDRESS
         sync: false
+
+      # Server-to-server Kelo ID proof issuer. Keep the API key synchronized
+      # with KELO_PDS_API_KEY in the separate Kelo ID Render service.
+      - key: PDS_KELO_ID_API_KEY
+        sync: false
+      - key: PDS_KELO_ID_PROOF_SECRET
+        sync: false
