@@ -130,12 +130,21 @@ Le PDS reste un PDS AT Protocol standard. La collecte/confirmation d'âge de Kel
 
 ## 7. Connexion par preuve Kelo ID
 
-Le PDS expose `POST /kelo-id/login-proof). Cette route est hébergée par le PDS, pas par le Gatekeeper. Elle exige les en-têtes `Authorization: Bearer <PDS_KELO_ID_API_KEY>` et `Content-Type: application/json), avec le corps `{"did":"did:plc:..."}) ou `{"did":"did:web:..."}). La réponse `200) contient `proof) et `expiresAt). Le contrat HTTP et les codes d'erreur sont détaillés dans `docs/KELO_ID_LOGIN_PROOF.md).
+Le PDS expose la route POST /kelo-id/login-proof. Elle est hébergée par le PDS, pas par le Gatekeeper.
 
-La clé API est partagée entre `PDS_KELO_ID_API_KEY) sur le PDS et `KELO_PDS_API_KEY) sur le serveur Kelo ID. Elle reste dans les variables d'environnement serveur et ne va jamais dans le navigateur.
+Requête :
+- Méthode : POST
+- Chemin : /kelo-id/login-proof
+- En-têtes : Authorization: Bearer <PDS_KELO_ID_API_KEY> et Content-Type: application/json
+- Corps : {"did":"did:plc:..."} ou {"did":"did:web:..."}
+- Réponse 200 : {"proof":"kelo-proof:v1:<expiration>:<nonce>:<signature>","expiresAt":<unix-seconds>}
 
-La clé de signature est dérivée dans le PDS depuis le `PDS_JWT_SECRET) existant selon la méthode historique : HMAC-SHA256 avec le message `kelo-id-login-proof-v1), digest binaire. Aucune variable de clé de signature séparée n'est nécessaire. Ne transmets jamais `PDS_JWT_SECRET) ni la clé dérivée à Kelo ID.
+Les codes d'erreur, la signature et les contrôles sont détaillés dans docs/KELO_ID_LOGIN_PROOF.md.
 
-Le Gatekeeper ne vérifie pas la preuve. Son patch local `preauth_check) doit transmettre intact le mot de passe commençant par `kelo-proof:v1:) au PDS via `ProxyThrough), sans demander la double authentification par e-mail. Le test de bout en bout ne peut être réalisé qu'après le déploiement de ce patch par son administrateur. Ce dépôt ne modifie ni ne déploie le Gatekeeper.
+La clé API est partagée entre PDS_KELO_ID_API_KEY sur le PDS et KELO_PDS_API_KEY sur le serveur Kelo ID. Elle reste dans les variables d'environnement serveur et ne va jamais dans le navigateur.
+
+La clé de signature est dérivée dans le PDS depuis le PDS_JWT_SECRET existant selon la méthode historique : HMAC-SHA256 avec le message kelo-id-login-proof-v1, digest binaire. Aucune clé de signature séparée n'est nécessaire. Ne transmets jamais PDS_JWT_SECRET ni la clé dérivée à Kelo ID.
+
+Le Gatekeeper ne vérifie pas la preuve. Son patch local preauth_check doit transmettre intact le mot de passe commençant par kelo-proof:v1: au PDS via ProxyThrough, sans demander la double authentification par e-mail. Le test de bout en bout ne peut être réalisé qu'après le déploiement de ce patch par son administrateur. Ce dépôt ne modifie ni ne déploie le Gatekeeper.
 
 Après déploiement coordonné, tester avec un compte non-production : première connexion par preuve, refus du rejeu, expiration, puis connexion normale et mot de passe d'application.
