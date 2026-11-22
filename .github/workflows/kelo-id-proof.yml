@@ -18,3 +18,5 @@ jobs:
         run: node custom-pds/kelo-proof.test.js
       - name: Test fail-closed PDS bundle patches
         run: node custom-pds/patches.test.js
+      - name: Build the custom image against the pinned official PDS image
+        run: docker build --pull -t kelo-pds-proof-check .
