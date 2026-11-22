@@ -9,3 +9,4 @@ pds-data/
 .DS_Store
 *.bak
 Dockerfile.logo
+.env.bak*
