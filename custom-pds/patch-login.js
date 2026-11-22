@@ -5,6 +5,10 @@ const file = process.argv[2]
 if (!file) throw new Error('Usage: node patch-login.js <account-manager.js>')
 
 const source = fs.readFileSync(file, 'utf8')
+if (source.includes("require('./kelo-proof').verifyKeloProof")) {
+  console.log('Kelo ID login proof patch already present')
+  process.exit(0)
+}
 const target = /const validAccountPass = await this\.verifyAccountPassword\(\s*user\.did,\s*password,?\s*\);/g
 const matches = [...source.matchAll(target)]
 if (matches.length !== 1) {
