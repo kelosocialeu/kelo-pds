@@ -1,0 +1,4 @@
+FROM kelo-pds:kelo-nocaptcha
+COPY custom-mail/confirm-email.hbs /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/mailer/templates/confirm-email.kelo.html
+COPY custom-mail/confirm-email.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/mailer/templates/confirm-email.js
+EXPOSE 10000
