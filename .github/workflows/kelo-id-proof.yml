@@ -1,0 +1,20 @@
+name: Kelo ID PDS proof checks
+
+on:
+  push:
+    branches: [main, "feature/kelo-id-one-time-login"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  proof:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test proof signing, expiry format and replay protection
+        run: node custom-pds/kelo-proof.test.js
+      - name: Test fail-closed PDS bundle patches
+        run: node custom-pds/patches.test.js
