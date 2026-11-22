@@ -1,34 +1,140 @@
 # Déploiement manuel sur Render — Web Service
 
-## Service existant
+Ce guide permet de déployer `kelo-pds` sans Blueprint, directement comme **Web Service Docker**.
 
-Conserver le service existant : dépôt `kelosocialeu/kelo-pds`, branche `main`, runtime Docker, Dockerfile `./Dockerfile`, healthcheck `/xrpc/_health`, port `10000). Ne pas créer un second PDS.
+## 1. Créer le service
 
-## Protection des données
+Dans Render :
 
-Avant toute opération de déploiement, vérifier que le disque persistant existant reste monté sur `/pds`. Ne jamais supprimer, réinitialiser, détacher ou remplacer ce disque. Ne pas modifier la base SQLite, les dépôts, les DID ou les blobs.
+1. `New` → `Web Service`
+2. Connecter le dépôt `kelosocialeu/kelo-pds`
+3. Branch : `main`
+4. Runtime / Language : `Docker`
+5. Dockerfile path : `./Dockerfile`
+6. Health Check Path : `/xrpc/_health`
+7. Auto Deploy : activé sur `main`
 
-Les marqueurs anti-rejeu sont écrits uniquement dans `/pds/kelo-id-proof-used`. Le PDS doit rester en instance unique avec ce stockage local.
+Le conteneur écoute sur le port `10000`. Ajouter `PDS_PORT=10000` dans les variables Render.
 
-## Variables d'environnement
+## 2. Important : stockage
 
-Conserver toutes les variables déjà configurées. Ne pas régénérer ni remplacer les secrets existants, notamment `PDS_JWT_SECRET`, la clé PLC, le mot de passe administrateur et DPoP.
+Le PDS utilise SQLite et des blobs locaux par défaut. Sans disque persistant Render, `/pds` est **éphémère** : un redéploiement, une reconstruction ou certains redémarrages peuvent supprimer comptes, dépôts et médias.
 
-Ajouter uniquement sur le PDS :
-- `PDS_KELO_ID_API_KEY` : clé aléatoire partagée avec le serveur Kelo ID, au moins 32 caractères.
+- Pour un **test temporaire** : le Web Service sans disque peut démarrer, mais ne créez pas de vrais comptes importants.
+- Pour la **production** : attacher un disque persistant monté sur `/pds`, ou migrer vers une architecture de stockage durable compatible avec le PDS.
 
-Sur le service Kelo ID :
-- `KELO_PDS_URL=https://pds.kelosocial.eu`
-- `KELO_PDS_API_KEY` : même valeur que `PDS_KELO_ID_API_KEY`.
+Ne lancez jamais publiquement un PDS contenant de vrais utilisateurs en considérant le filesystem gratuit comme une sauvegarde.
 
-La clé de signature est dérivée dans le PDS depuis le `PDS_JWT_SECRET` existant. Ne pas définir `PDS_KELO_ID_PROOF_SECRET`. Masquer toute valeur réelle par `***`.
+## 3. Variables d'environnement minimales
 
-## CAPTCHA, OAuth et e-mails
+### Service
 
-Le Dockerfile conserve les variables hCaptcha natives du PDS vides et le modèle `.env.example` conserve `GATEKEEPER_CREATE_ACCOUNT_CAPTCHA=false`. Il conserve aussi le correctif OAuth acceptant `same-site` et les cinq modèles d'e-mails Kelo Social avec le logo `https://kelosocial.sirv.com/logo.png`. Ne change pas ces éléments.
+```text
+PDS_PORT=10000
+PDS_HOSTNAME=pds.kelosocial.eu
+PDS_SERVICE_NAME=Kelo Social PDS
+PDS_SERVICE_HANDLE_DOMAINS=.kelosocial.eu
+PDS_HOME_URL=https://kelosocial.eu
+PDS_LOGO_URL=https://kelosocial.sirv.com/logo.png
+PDS_CONTACT_EMAIL_ADDRESS=support@kelosocial.eu
+PDS_PRIVACY_POLICY_URL=https://kelosocial.eu/privacy
+PDS_TERMS_OF_SERVICE_URL=https://kelosocial.eu/terms
+```
 
-## API et vérifications
+### Secrets permanents
 
-L'API d'émission est `POST https://pds.kelosocial.eu/kelo-id/login-proof`, protégée par `Authorization: Bearer <PDS_KELO_ID_API_KEY>`, avec le corps JSON `{"did":"did:..."}`. La réponse 200 contient `proof` et `expiresAt`. Voir `docs/KELO_ID_LOGIN_PROOF.md` pour le contrat complet.
+```text
+PDS_JWT_SECRET=<64 caractères hex aléatoires ou plus>
+PDS_ADMIN_PASSWORD=<secret fort>
+PDS_DPOP_SECRET=<64 caractères hex aléatoires ou plus>
+PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX=<clé secp256k1 privée hex>
+```
 
-Après un déploiement contrôlé, vérifier le healthcheck, le DID well-known, les connexions par mot de passe et mot de passe d'application, l'émission, la première utilisation et le refus du rejeu. Le test de bout en bout Gatekeeper ne se fait qu'après déploiement du correctif `preauth_check` par son administrateur. Ce dépôt ne déploie ni ne modifie le Gatekeeper.
+Ne changez jamais la clé PLC d'un PDS existant sans procédure de rotation/migration : elle fait partie des secrets critiques de l'identité du serveur.
+
+### Stockage local
+
+```text
+PDS_DATA_DIRECTORY=/pds
+PDS_BLOBSTORE_DISK_LOCATION=/pds/blocks
+PDS_BLOBSTORE_DISK_TMP_LOCATION=/pds/tmp
+PDS_BLOB_UPLOAD_LIMIT=104857600
+```
+
+### Réseau AT Protocol public
+
+```text
+PDS_DID_PLC_URL=https://plc.directory
+PDS_BSKY_APP_VIEW_URL=https://api.bsky.app
+PDS_BSKY_APP_VIEW_DID=did:web:api.bsky.app
+PDS_REPORT_SERVICE_URL=https://mod.bsky.app
+PDS_REPORT_SERVICE_DID=did:plc:ar7c4by46qjdydhdevvrndac
+PDS_CRAWLERS=https://bsky.network
+```
+
+### Inscription et hCaptcha
+
+```text
+PDS_INVITE_REQUIRED=false
+PDS_HCAPTCHA_SITE_KEY=<site key hCaptcha>
+PDS_HCAPTCHA_SECRET_KEY=<secret hCaptcha>
+PDS_HCAPTCHA_TOKEN_SALT=<secret aléatoire>
+```
+
+### Email
+
+```text
+PDS_EMAIL_SMTP_URL=<URL SMTP>
+PDS_EMAIL_FROM_ADDRESS=Kelo Social <noreply@kelosocial.eu>
+```
+
+### Sécurité
+
+```text
+PDS_RATE_LIMITS_ENABLED=true
+PDS_DISABLE_SSRF_PROTECTION=false
+LOG_ENABLED=true
+LOG_LEVEL=info
+```
+
+## 4. Domaine Render puis domaine Kelo
+
+Le premier déploiement peut être testé sur le domaine `*.onrender.com` fourni par Render, mais le PDS de production doit ensuite utiliser `pds.kelosocial.eu` de façon stable.
+
+Dans Render → Settings → Custom Domains, ajouter :
+
+```text
+pds.kelosocial.eu
+```
+
+Puis suivre la cible DNS CNAME fournie par Render chez le registrar DNS.
+
+Le `PDS_HOSTNAME` doit rester `pds.kelosocial.eu`; ne le remplacez pas par le domaine temporaire `onrender.com` pour le PDS définitif.
+
+## 5. Vérifications après déploiement
+
+Tester :
+
+```text
+https://pds.kelosocial.eu/xrpc/_health
+https://pds.kelosocial.eu/.well-known/atproto-did
+```
+
+Le healthcheck doit répondre correctement. Ensuite seulement, tester la création d'un compte temporaire.
+
+## 6. Âge
+
+Le PDS reste un PDS AT Protocol standard. La collecte/confirmation d'âge de Kelo doit être gérée dans le parcours d'inscription Kelo. Nous n'ajoutons pas de champ propriétaire à `com.atproto.server.createAccount`, afin de conserver la compatibilité avec les clients AT Protocol.
+
+## 7. Connexion par Kelo ID
+
+Le PDS expose `POST /kelo-id/login-proof` pour l'API serveur Kelo ID. Cette route n'est pas destinée aux navigateurs : elle exige `Authorization: Bearer <PDS_KELO_ID_API_KEY>`, vérifie que le DID existe sur ce PDS, puis délivre une preuve HMAC valable 60 secondes.
+
+Configurer dans Render :
+
+- `PDS_KELO_ID_API_KEY` : secret partagé avec `KELO_PDS_API_KEY` dans le service Kelo ID.
+- `PDS_KELO_ID_PROOF_SECRET` : secret aléatoire indépendant d'au moins 32 caractères, conservé uniquement sur le PDS.
+
+Kelo ID ne reçoit jamais la clé de signature. Le PDS consomme la preuve une seule fois et enregistre le nonce sous `/pds/kelo-id-proof-used`. Le volume persistant `/pds` doit rester attaché et le PDS doit rester en instance unique. Les mots de passe habituels et mots de passe d'application continuent de fonctionner.
+
+Après déploiement, vérifier le healthcheck, la connexion habituelle, un mot de passe d'application et une connexion Kelo ID depuis un client AT Protocol. Ne jamais réutiliser une preuve réelle pour les tests de rejeu : générer un nouveau code pour chaque tentative.
