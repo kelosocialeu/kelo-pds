@@ -11,4 +11,7 @@ ENV PDS_HCAPTCHA_SITE_KEY="" \
 # Preserve the OAuth compatibility fix for same-site browser requests.
 RUN sed -i "s/\['same-origin', 'cross-site', 'none'\]/['same-origin', 'same-site', 'cross-site', 'none']/" /app/node_modules/.pnpm/@atproto+oauth-provider@0.16.0/node_modules/@atproto/oauth-provider/dist/router/create-authorization-page-middleware.js
 
+# E-mails Kelo Social (logo + textes en français)
+COPY custom-mail/dist-templates/ /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/mailer/templates/
+
 EXPOSE 10000

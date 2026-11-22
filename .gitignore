@@ -7,3 +7,5 @@ pds-data/
 *.sqlite-wal
 *.log
 .DS_Store
+*.bak
+Dockerfile.logo

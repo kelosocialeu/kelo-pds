@@ -1,3 +1,0 @@
-FROM kelo-pds:kelo-nocaptcha
-COPY custom-mail/dist-templates/ /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/mailer/templates/
-EXPOSE 10000
