@@ -46,13 +46,11 @@ PDS_DISABLE_SSRF_PROTECTION=false
 
 ## Comptes et spam
 
-Avec les inscriptions publiques :
+La configuration actuelle conserve le CAPTCHA désactivé :
+- les variables hCaptcha natives du PDS sont définies à des valeurs vides dans le Dockerfile ;
+- `GATEKEEPER_CREATE_ACCOUNT_CAPTCHA=false) dans le modèle d'environnement.
 
-- hCaptcha obligatoire ;
-- email fonctionnel ;
-- surveillance des créations anormales ;
-- possibilité d'utiliser temporairement les invitations si une attaque d'inscription survient ;
-- logs et métriques surveillés.
+Ne change pas ces paramètres pendant l'intégration Kelo ID. Conserver un e-mail fonctionnel, surveiller les créations anormales et les logs, et utiliser les mécanismes d'invitation existants si une attaque d'inscription le nécessite.
 
 ## Modération
 
