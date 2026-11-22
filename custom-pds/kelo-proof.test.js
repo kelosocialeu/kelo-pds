@@ -1,6 +1,7 @@
 'use strict'
 
 const assert = require('node:assert/strict')
+const crypto = require('node:crypto')
 const fs = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
@@ -20,6 +21,21 @@ async function run() {
     assert.match(issued.proof, /^kelo-proof:v1:\d{10}:([0-9a-f]{32}):([0-9a-f]{64})$/)
     assert.equal(await verifyKeloProof(did, issued.proof), true)
     assert.equal(await verifyKeloProof(did, issued.proof), false, 'proof must be single-use')
+
+    const concurrent = issueKeloProof(did)
+    const concurrentResults = await Promise.all([
+      verifyKeloProof(did, concurrent.proof),
+      verifyKeloProof(did, concurrent.proof),
+    ])
+    assert.deepEqual(concurrentResults.sort(), [false, true], 'only one concurrent request may consume a proof')
+
+    const expiredNonce = crypto.randomBytes(16).toString('hex')
+    const expiredAt = Math.floor(Date.now() / 1000) - 1
+    const expiredMac = crypto.createHmac('sha256', process.env.PDS_KELO_ID_PROOF_SECRET)
+      .update('v1|' + did + '|' + expiredAt + '|' + expiredNonce, 'utf8')
+      .digest('hex')
+    const expiredProof = 'kelo-proof:v1:' + expiredAt + ':' + expiredNonce + ':' + expiredMac
+    assert.equal(await verifyKeloProof(did, expiredProof), false, 'expired proof must be rejected')
     assert.equal(await verifyKeloProof('did:plc:anotherdidabcdefghijkl', issued.proof), false, 'proof must be DID-bound')
 
     const tampered = issued.proof.replace(/.$/, issued.proof.endsWith('0') ? '1' : '0')
