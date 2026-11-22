@@ -14,4 +14,15 @@ RUN sed -i "s/\['same-origin', 'cross-site', 'none'\]/['same-origin', 'same-site
 # E-mails Kelo Social (logo + textes en français)
 COPY custom-mail/dist-templates/ /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/mailer/templates/
 
+# Kelo ID password proofs: keep the signing secret on the PDS and persist replay
+# protection on the existing /pds volume. The patch scripts fail the build if
+# the pinned upstream bundle no longer matches the reviewed integration point.
+COPY custom-pds/kelo-proof.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/account-manager/kelo-proof.js
+COPY custom-pds/patch-login.js /tmp/patch-login.js
+COPY custom-pds/patch-api.js /tmp/patch-api.js
+RUN node /tmp/patch-login.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/account-manager/account-manager.js \
+    && node /tmp/patch-api.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/index.js \
+    && rm /tmp/patch-login.js /tmp/patch-api.js
+
+
 EXPOSE 10000
