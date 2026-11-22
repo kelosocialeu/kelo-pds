@@ -12,6 +12,8 @@ Ne jamais committer les valeurs suivantes :
 - `PDS_HCAPTCHA_TOKEN_SALT`
 - identifiants SMTP
 - identifiants S3 éventuels
+- `PDS_KELO_ID_API_KEY`
+- `PDS_KELO_ID_PROOF_SECRET`
 
 Sauvegarder les secrets critiques hors de Render dans un gestionnaire de secrets sécurisé.
 
