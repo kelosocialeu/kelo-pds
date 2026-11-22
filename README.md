@@ -9,7 +9,8 @@ Configuration du Personal Data Server AT Protocol de Kelo Social, conçue pour f
 - Héberger le serveur sur `pds.kelosocial.eu`.
 - Permettre des handles comme `nom.kelosocial.eu`.
 - Utiliser le hCaptcha natif du PDS pour la création de comptes.
-- Accepter une preuve de connexion Kelo ID signée par le PDS, sans remplacer les mots de passe classiques ni les mots de passe d’application.\n- Réserver l’émission des preuves à une API serveur-à-serveur authentifiée, avec expiration courte et anti-rejeu persistant.
+- Accepter une preuve de connexion Kelo ID signée par le PDS, sans remplacer les mots de passe classiques ni les mots de passe d’application.
+- Réserver l’émission des preuves à une API serveur-à-serveur authentifiée, avec expiration courte et anti-rejeu persistant.
 - Activer SMTP, fédération, rate limiting, protection SSRF, healthcheck et logs.
 
 ## Méthode de déploiement recommandée actuellement
@@ -33,13 +34,15 @@ docs/RENDER_WEB_SERVICE.md
 - Health check : `/xrpc/_health`
 - Port PDS : `10000`
 
-Le `Dockerfile` utilise directement l'image officielle du PDS :
+Le `Dockerfile` part de l'image officielle du PDS et y applique les adaptations Kelo Social/Kelo ID :
 
 ```text
 ghcr.io/bluesky-social/pds:0.4.219
 ```
 
-Aucun script de démarrage Kelo propriétaire n'est nécessaire : on conserve le comportement upstream du PDS.
+Le démarrage du conteneur reste celui de l'image officielle. Les adaptations Kelo sont appliquées à la construction de l'image, sans remplacer le processus de démarrage upstream.
+
+Les modèles d'e-mails de confirmation, réinitialisation du mot de passe, changement d'adresse, suppression de compte et opération PLC utilisent le logo officiel Kelo Social (`https://kelosocial.sirv.com/logo.png`). Le Dockerfile les copie dans les modèles compilés du PDS.
 
 ## Important : stockage Render
 
