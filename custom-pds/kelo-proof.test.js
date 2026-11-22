@@ -17,7 +17,7 @@ async function run() {
     const did = 'did:plc:abcdefghijklmnopqrstuvwx'
     const issued = issueKeloProof(did)
 
-    assert.match(issued.proof, /^kelo-proof:v1:\\d{10}:([0-9a-f]{32}):([0-9a-f]{64})$/)
+    assert.match(issued.proof, /^kelo-proof:v1:\d{10}:([0-9a-f]{32}):([0-9a-f]{64})$/)
     assert.equal(await verifyKeloProof(did, issued.proof), true)
     assert.equal(await verifyKeloProof(did, issued.proof), false, 'proof must be single-use')
     assert.equal(await verifyKeloProof('did:plc:anotherdidabcdefghijkl', issued.proof), false, 'proof must be DID-bound')
