@@ -9,7 +9,7 @@ Configuration du Personal Data Server AT Protocol de Kelo Social, conçue pour f
 - Héberger le serveur sur `pds.kelosocial.eu`.
 - Permettre des handles comme `nom.kelosocial.eu`.
 - Utiliser le hCaptcha natif du PDS pour la création de comptes.
-- Garder la vérification Kelo ID uniquement dans Kelo Social, jamais dans le PDS.
+- Accepter une preuve de connexion Kelo ID signée par le PDS, sans remplacer les mots de passe classiques ni les mots de passe d’application.\n- Réserver l’émission des preuves à une API serveur-à-serveur authentifiée, avec expiration courte et anti-rejeu persistant.
 - Activer SMTP, fédération, rate limiting, protection SSRF, healthcheck et logs.
 
 ## Méthode de déploiement recommandée actuellement
