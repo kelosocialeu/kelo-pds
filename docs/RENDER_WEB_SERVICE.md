@@ -72,14 +72,16 @@ PDS_REPORT_SERVICE_DID=did:plc:ar7c4by46qjdydhdevvrndac
 PDS_CRAWLERS=https://bsky.network
 ```
 
-### Inscription et hCaptcha
+### Inscription et CAPTCHA
+
+Conserver la configuration actuelle :
 
 ```text
 PDS_INVITE_REQUIRED=false
-PDS_HCAPTCHA_SITE_KEY=<site key hCaptcha>
-PDS_HCAPTCHA_SECRET_KEY=<secret hCaptcha>
-PDS_HCAPTCHA_TOKEN_SALT=<secret aléatoire>
+GATEKEEPER_CREATE_ACCOUNT_CAPTCHA=false
 ```
+
+Le Dockerfile définit les trois variables hCaptcha natives du PDS à des valeurs vides. Le CAPTCHA reste donc désactivé selon la configuration actuelle. Ne modifie pas cette politique dans le cadre de la connexion Kelo ID.
 
 ### Email
 
