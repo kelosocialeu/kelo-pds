@@ -1,0 +1,6 @@
+FROM kelo-pds:kelo-logo4
+ARG D=/app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/account-manager
+COPY custom-pds/kelo-proof.js ${D}/kelo-proof.js
+COPY custom-pds/patch-login.js /tmp/patch-login.js
+RUN node /tmp/patch-login.js ${D}/account-manager.js && rm /tmp/patch-login.js
+EXPOSE 10000
