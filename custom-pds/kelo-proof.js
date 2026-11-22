@@ -42,8 +42,11 @@ async function pruneUsedNonces(directory, now) {
     if (!NONCE_PATTERN.test(name)) return
     const file = path.join(directory, name)
     try {
-      const expiry = Number((await fs.readFile(file, 'utf8')).trim())
-      if (!Number.isSafeInteger(expiry) || expiry < now) await fs.unlink(file)
+      // Keep every newly-created marker for longer than the proof lifetime.
+      // Checking mtime (rather than reading a possibly half-written file)
+      // avoids a race with another login consuming the same nonce.
+      const stat = await fs.stat(file)
+      if (stat.mtimeMs < (now - 10 * 60) * 1000) await fs.unlink(file)
     } catch (error) {
       if (error && error.code !== 'ENOENT') throw error
     }
