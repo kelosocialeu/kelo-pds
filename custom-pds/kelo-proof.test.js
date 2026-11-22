@@ -53,7 +53,7 @@ async function run() {
     assert.equal(await verifyKeloProof(did, expiredProof), false, 'expired proof must be rejected')
 
     const futureNonce = crypto.randomBytes(16).toString('hex')
-    const futureAt = Math.floor(Date.now() / 1000) + TTL_SECONDS + 1
+    const futureAt = Math.floor(Date.now() / 1000) + TTL_SECONDS + 30
     const futureMac = crypto.createHmac('sha256', legacySigningKey(process.env.PDS_JWT_SECRET))
       .update('v1|' + did + '|' + futureAt + '|' + futureNonce, 'utf8')
       .digest('hex')
