@@ -126,6 +126,15 @@ Le healthcheck doit répondre correctement. Ensuite seulement, tester la créati
 
 Le PDS reste un PDS AT Protocol standard. La collecte/confirmation d'âge de Kelo doit être gérée dans le parcours d'inscription Kelo. Nous n'ajoutons pas de champ propriétaire à `com.atproto.server.createAccount`, afin de conserver la compatibilité avec les clients AT Protocol.
 
-## 7. Vérification Kelo ID
+## 7. Connexion par Kelo ID
 
-Aucun blocage Kelo ID n'est implémenté dans le PDS. Un compte `*.kelosocial.eu` reste utilisable normalement depuis les autres clients AT Protocol. Les restrictions de publication avant vérification restent uniquement dans l'application Kelo Social.
+Le PDS expose `POST /kelo-id/login-proof` pour l'API serveur Kelo ID. Cette route n'est pas destinée aux navigateurs : elle exige `Authorization: Bearer <PDS_KELO_ID_API_KEY>`, vérifie que le DID existe sur ce PDS, puis délivre une preuve HMAC valable 60 secondes.
+
+Configurer dans Render :
+
+- `PDS_KELO_ID_API_KEY` : secret partagé avec `KELO_PDS_API_KEY` dans le service Kelo ID.
+- `PDS_KELO_ID_PROOF_SECRET` : secret aléatoire indépendant d'au moins 32 caractères, conservé uniquement sur le PDS.
+
+Kelo ID ne reçoit jamais la clé de signature. Le PDS consomme la preuve une seule fois et enregistre le nonce sous `/pds/kelo-id-proof-used`. Le volume persistant `/pds` doit rester attaché et le PDS doit rester en instance unique. Les mots de passe habituels et mots de passe d'application continuent de fonctionner.
+
+Après déploiement, vérifier le healthcheck, la connexion habituelle, un mot de passe d'application et une connexion Kelo ID depuis un client AT Protocol. Ne jamais réutiliser une preuve réelle pour les tests de rejeu : générer un nouveau code pour chaque tentative.
