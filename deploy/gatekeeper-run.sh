@@ -1,0 +1,2 @@
+cd /home/ubuntu/kelo-pds
+sudo docker run -d --name pds-gatekeeper --restart unless-stopped --network host --env-file .env -v /home/ubuntu/kelo-pds/custom-mail/gatekeeper:/kelo-email-templates:ro -e GATEKEEPER_EMAIL_TEMPLATES_DIRECTORY=/kelo-email-templates -e GATEKEEPER_TWO_FACTOR_EMAIL_SUBJECT="Votre code de connexion Kelo Social" -e GATEKEEPER_CREATE_ACCOUNT_CAPTCHA=false -e GATEKEEPER_HOST=127.0.0.1 -e GATEKEEPER_PORT=8080 -e PDS_BASE_URL=http://127.0.0.1:10000 -e PDS_DATA_DIRECTORY=/pds -v /opt/kelo-pds:/pds ghcr.io/kelosocialeu/kelo-pds-gatekeeper:latest
