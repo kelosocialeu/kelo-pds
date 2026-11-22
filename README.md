@@ -39,7 +39,7 @@ Voir `docs/KELO_ID_LOGIN_PROOF.md` pour le contrat HTTP, les erreurs et les test
 
 ## Production
 
-Conserver le disque persistant existant monté sur `/pds), sans le supprimer ni le réinitialiser. Le mécanisme anti-rejeu local suppose une seule instance PDS. Ne jamais régénérer `PDS_JWT_SECRET), la clé PLC, le mot de passe administrateur ou DPoP sur un PDS existant.
+Conserver le disque persistant existant monté sur `/pds`, sans le supprimer ni le réinitialiser. Le mécanisme anti-rejeu local suppose une seule instance PDS. Ne jamais régénérer `PDS_JWT_SECRET`, la clé PLC, le mot de passe administrateur ou DPoP sur un PDS existant.
 
 ## CAPTCHA, OAuth et e-mails
 
