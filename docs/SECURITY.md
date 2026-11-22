@@ -57,7 +57,9 @@ Avec les inscriptions publiques :
 
 ## Modération
 
-Le PDS conserve les flux AT Protocol standard. En complément, il accepte une preuve Kelo ID signée et à usage unique comme méthode de connexion au compte PDS. L'émission est protégée par `PDS_KELO_ID_API_KEY`; la signature utilise `PDS_KELO_ID_PROOF_SECRET`, qui reste exclusivement sur le PDS. Les preuves consommées sont marquées sur le volume persistant `/pds` afin que le redémarrage du conteneur ne réactive pas un code déjà utilisé.\n\nNe pas déployer plusieurs instances PDS avec des volumes locaux indépendants : l'anti-rejeu repose sur le volume persistant partagé par l'instance unique. Les mots de passe classiques et mots de passe d'application restent inchangés.
+Le PDS conserve les flux AT Protocol standard. En complément, il accepte une preuve Kelo ID signée et à usage unique comme méthode de connexion au compte PDS. L'émission est protégée par `PDS_KELO_ID_API_KEY`; la signature utilise `PDS_KELO_ID_PROOF_SECRET`, qui reste exclusivement sur le PDS. Les preuves consommées sont marquées sur le volume persistant `/pds` afin que le redémarrage du conteneur ne réactive pas un code déjà utilisé.
+
+Ne pas déployer plusieurs instances PDS avec des volumes locaux indépendants : l'anti-rejeu repose sur le volume persistant partagé par l'instance unique. Les mots de passe classiques et mots de passe d'application restent inchangés.
 
 Les signalements AT Protocol sont envoyés au service de report configuré. Pour une modération Kelo indépendante à grande échelle, prévoir ensuite une infrastructure Ozone/labeler adaptée.
 
