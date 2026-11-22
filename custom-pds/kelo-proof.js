@@ -8,6 +8,8 @@ const PREFIX = 'kelo-proof:v1:'
 const TTL_SECONDS = 60
 const NONCE_PATTERN = /^[0-9a-f]{32}$/
 const DID_PATTERN = /^did:(plc|web):[A-Za-z0-9._:%-]+$/
+let lastPruneAt = 0
+let prunePromise = null
 
 function getSigningKey() {
   const secret = process.env.PDS_KELO_ID_PROOF_SECRET
@@ -53,6 +55,16 @@ async function pruneUsedNonces(directory, now) {
   }))
 }
 
+async function maybePruneUsedNonces(directory, now) {
+  if (now - lastPruneAt < 300) return
+  if (!prunePromise) {
+    prunePromise = pruneUsedNonces(directory, now)
+      .then(() => { lastPruneAt = now })
+      .finally(() => { prunePromise = null })
+  }
+  await prunePromise
+}
+
 async function verifyKeloProof(did, password) {
   try {
     if (typeof password !== 'string' || !password.startsWith(PREFIX)) return false
@@ -70,7 +82,7 @@ async function verifyKeloProof(did, password) {
 
     const usedDirectory = path.join(process.env.PDS_DATA_DIRECTORY || '/pds', 'kelo-id-proof-used')
     await fs.mkdir(usedDirectory, { recursive: true, mode: 0o700 })
-    await pruneUsedNonces(usedDirectory, now)
+    await maybePruneUsedNonces(usedDirectory, now)
     let handle
     try {
       handle = await fs.open(path.join(usedDirectory, nonce), 'wx', 0o600)
