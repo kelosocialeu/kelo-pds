@@ -13,7 +13,6 @@ Ne jamais committer les valeurs suivantes :
 - identifiants SMTP
 - identifiants S3 éventuels
 - `PDS_KELO_ID_API_KEY`
-- `PDS_KELO_ID_PROOF_SECRET`
 
 Sauvegarder les secrets critiques hors de Render dans un gestionnaire de secrets sécurisé.
 
@@ -57,7 +56,7 @@ Avec les inscriptions publiques :
 
 ## Modération
 
-Le PDS conserve les flux AT Protocol standard. En complément, il accepte une preuve Kelo ID signée et à usage unique comme méthode de connexion au compte PDS. L'émission est protégée par `PDS_KELO_ID_API_KEY`; la signature utilise `PDS_KELO_ID_PROOF_SECRET`, qui reste exclusivement sur le PDS. Les preuves consommées sont marquées sur le volume persistant `/pds` afin que le redémarrage du conteneur ne réactive pas un code déjà utilisé.
+Le PDS conserve les flux AT Protocol standard. En complément, il accepte une preuve Kelo ID signée et à usage unique comme méthode de connexion au compte PDS. L'émission est protégée par `PDS_KELO_ID_API_KEY`; la clé de signature est dérivée exclusivement depuis le `PDS_JWT_SECRET` existant avec le contexte `kelo-id-login-proof-v1`, selon la méthode historique. Aucune clé de signature indépendante n'est utilisée. Les preuves consommées sont marquées sur le volume persistant `/pds` afin que le redémarrage du conteneur ne réactive pas un code déjà utilisé.
 
 Ne pas déployer plusieurs instances PDS avec des volumes locaux indépendants : l'anti-rejeu repose sur le volume persistant partagé par l'instance unique. Les mots de passe classiques et mots de passe d'application restent inchangés.
 
