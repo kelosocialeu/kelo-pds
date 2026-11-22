@@ -2,81 +2,42 @@
 
 ## Secrets critiques
 
-Ne jamais committer les valeurs suivantes :
-
+Ne jamais committer ni afficher les valeurs réelles :
 - `PDS_JWT_SECRET`
 - `PDS_ADMIN_PASSWORD`
 - `PDS_DPOP_SECRET`
 - `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX`
 - `PDS_HCAPTCHA_SECRET_KEY`
 - `PDS_HCAPTCHA_TOKEN_SALT`
-- identifiants SMTP
-- identifiants S3 éventuels
+- identifiants SMTP et S3
+- `PDS_KELO_ID_API_KEY`
 
-Sauvegarder les secrets critiques hors de Render dans un gestionnaire de secrets sécurisé.
+Les secrets restent dans le gestionnaire de secrets de l'hébergeur et sont masqués par `***` dans les comptes rendus.
 
-## Clé PLC
+## Identité et clé JWT
 
-La clé `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX` participe au contrôle des identités DID PLC créées par le PDS. Ne la remplacez pas arbitrairement une fois des comptes en production.
+La clé `PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX` participe au contrôle des identités DID PLC. Ne la remplacez jamais arbitrairement après création des comptes. Ne régénérez pas non plus `PDS_JWT_SECRET` sur un PDS existant : elle sert à la session et à la dérivation historique de la clé Kelo ID.
 
-## Stockage
+Dérivation exacte : `HMAC-SHA256(key=PDS_JWT_SECRET, message="kelo-id-login-proof-v1")`, digest binaire de 32 octets. Aucune variable `PDS_KELO_ID_PROOF_SECRET` n'est utilisée.
 
-Le disque Render doit être monté sur `/pds`. Seuls les fichiers écrits sous ce chemin sont persistants.
+## Stockage et anti-rejeu
 
-Pour une charge importante, déplacer les blobs vers S3-compatible est préférable afin d'éviter de faire grossir le disque local avec toutes les photos et vidéos.
+Le disque Render existant reste monté sur `/pds`. Les marqueurs de preuve sont écrits uniquement dans `/pds/kelo-id-proof-used`. Ne supprimez pas ce répertoire pendant la fenêtre de rétention et ne réinitialisez jamais le volume de production.
 
-## Rate limiting
+La création exclusive des marqueurs empêche les validations simultanées. Cette stratégie suppose une seule instance PDS avec le même volume persistant.
 
-Conserver :
+## Rate limiting et SSRF
 
-```text
-PDS_RATE_LIMITS_ENABLED=true
-```
+Conserver `PDS_RATE_LIMITS_ENABLED=true` et `PDS_DISABLE_SSRF_PROTECTION=false`. Ne créez pas de bypass global public.
 
-Ne créez pas de bypass global public. Si le PDS est un jour exécuté avec plusieurs processus/instances, utilisez Redis/Valkey partagé pour le scratch/rate limiting.
+## CAPTCHA, OAuth et e-mails
 
-## SSRF
+Ne changez pas la configuration CAPTCHA existante dans le cadre de cette intégration. Le Dockerfile conserve les variables hCaptcha PDS vides et `.env.example` conserve `GATEKEEPER_CREATE_ACCOUNT_CAPTCHA=false`. Le correctif OAuth `same-site` et les cinq modèles d'e-mails Kelo Social avec le logo officiel restent en place.
 
-Conserver :
+## Gatekeeper
 
-```text
-PDS_DISABLE_SSRF_PROTECTION=false
-```
+Le Gatekeeper est hors de ce dépôt et de l'accès GitHub utilisé ici. Son correctif `preauth_check` est appliqué et déployé séparément par l'administrateur. Il doit transmettre sans modification les mots de passe commençant par `kelo-proof:v1:` au PDS. Ne pas prétendre qu'un test de bout en bout Gatekeeper a réussi tant que ce correctif n'est pas déployé.
 
-## Comptes et spam
+## Sauvegardes et mises à jour
 
-Avec les inscriptions publiques :
-
-- hCaptcha obligatoire ;
-- email fonctionnel ;
-- surveillance des créations anormales ;
-- possibilité d'utiliser temporairement les invitations si une attaque d'inscription survient ;
-- logs et métriques surveillés.
-
-## Modération
-
-Le PDS reste standard et n'impose pas Kelo ID. Les règles de vérification Kelo ID sont appliquées dans Kelo Social uniquement.
-
-Les signalements AT Protocol sont envoyés au service de report configuré. Pour une modération Kelo indépendante à grande échelle, prévoir ensuite une infrastructure Ozone/labeler adaptée.
-
-## Sauvegardes et restauration
-
-Avant l'ouverture publique :
-
-1. vérifier les snapshots Render ;
-2. sauvegarder les secrets hors Render ;
-3. documenter une restauration complète ;
-4. tester la restauration sur un environnement non-production ;
-5. surveiller la capacité disque.
-
-## Mises à jour
-
-Le Dockerfile est volontairement épinglé à une version précise. Pour mettre à jour :
-
-1. lire les notes upstream ;
-2. sauvegarder ;
-3. modifier le tag du Dockerfile ;
-4. déployer ;
-5. vérifier `_health`, les sessions, uploads, WebSocket subscribeRepos et la visibilité via Relay/AppView.
-
-Ne passez pas automatiquement à `latest` en production.
+Avant tout déploiement, vérifier une sauvegarde récente du volume et conserver les secrets existants. Le Dockerfile reste épinglé à une version précise du PDS officiel. Toute mise à jour upstream exige de revalider les points d'ancrage et le build complet.

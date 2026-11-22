@@ -4,114 +4,47 @@ Configuration du Personal Data Server AT Protocol de Kelo Social, conçue pour f
 
 ## Objectifs
 
-- Utiliser l'image officielle Bluesky/AT Protocol PDS.
-- Rester compatible avec Bluesky et les autres clients AT Protocol.
-- Héberger le serveur sur `pds.kelosocial.eu`.
-- Permettre des handles comme `nom.kelosocial.eu`.
-- Utiliser le hCaptcha natif du PDS pour la création de comptes.
-- Garder la vérification Kelo ID uniquement dans Kelo Social, jamais dans le PDS.
-- Activer SMTP, fédération, rate limiting, protection SSRF, healthcheck et logs.
+- Utiliser l'image officielle Bluesky/AT Protocol PDS et rester compatible avec les clients AT Protocol.
+- Héberger le serveur sur `pds.kelosocial.eu` et permettre des handles `*.kelosocial.eu`.
+- Conserver la configuration actuelle du CAPTCHA et du Gatekeeper.
+- Accepter une preuve de connexion Kelo ID signée et vérifiée par le PDS, sans remplacer les mots de passe classiques ni les mots de passe d'application.
+- Émettre les preuves par une API serveur-à-serveur authentifiée, avec une durée de 60 secondes et une protection anti-rejeu persistante.
 
-## Méthode de déploiement recommandée actuellement
+## Déploiement
 
-Le déploiement recommandé est maintenant **Render → Web Service → Docker**.
+Render → Web Service → Docker, dépôt `kelosocialeu/kelo-pds`, branche `main`, Dockerfile `./Dockerfile`, healthcheck `/xrpc/_health`.
 
-Le fichier `render.yaml` reste disponible pour un éventuel Blueprint plus tard, mais il n'est pas nécessaire pour le déploiement manuel.
+Guide : `docs/RENDER_WEB_SERVICE.md`.
 
-Guide exact :
+Le Dockerfile reste épinglé à `ghcr.io/bluesky-social/pds:0.4.219`. Il conserve les modèles d'e-mails Kelo Social, le correctif OAuth `same-site` et les variables hCaptcha PDS vides déjà présentes. Le processus de démarrage upstream n'est pas remplacé.
 
-```text
-docs/RENDER_WEB_SERVICE.md
-```
+## Connexion par Kelo ID
 
-## Configuration Render Web Service
+Le PDS expose `POST /kelo-id/login-proof`, réservé aux appels serveur-à-serveur de Kelo ID. Il vérifie que le DID est un compte de ce PDS, puis émet une preuve à usage unique.
 
-- Repository : `kelosocialeu/kelo-pds`
-- Branch : `main`
-- Runtime : `Docker`
-- Dockerfile : `./Dockerfile`
-- Health check : `/xrpc/_health`
-- Port PDS : `10000`
+Le Gatekeeper ne fabrique ni ne vérifie la preuve. Son correctif `preauth_check` séparé doit retourner `ProxyThrough` pour le préfixe `kelo-proof:v1:` et transmettre le mot de passe intact au PDS. La vérification HMAC, l'expiration et l'anti-rejeu sont effectués par le PDS dans `AccountManager.login`.
 
-Le `Dockerfile` utilise directement l'image officielle du PDS :
+Format : `kelo-proof:v1:<expiration>:<nonce>:<signature>`.
 
-```text
-ghcr.io/bluesky-social/pds:0.4.219
-```
+- Texte signé : `v1|<DID>|<expiration>|<nonce>`.
+- Clé dérivée dans le PDS : `HMAC-SHA256(PDS_JWT_SECRET, "kelo-id-login-proof-v1")`, digest binaire.
+- HMAC de preuve : SHA-256, signature hex de 64 caractères.
+- Expiration : 60 secondes.
+- Nonce : 16 octets aléatoires, 32 caractères hex.
+- Usage unique : création atomique d'un marqueur dans `/pds/kelo-id-proof-used`.
 
-Aucun script de démarrage Kelo propriétaire n'est nécessaire : on conserve le comportement upstream du PDS.
+La clé dérivée et `PDS_JWT_SECRET` ne quittent jamais le PDS. Kelo ID ne reçoit que la preuve et son expiration. Aucune variable `PDS_KELO_ID_PROOF_SECRET` n'est utilisée.
 
-## Important : stockage Render
+Voir `docs/KELO_ID_LOGIN_PROOF.md` pour le contrat HTTP, les erreurs et les tests.
 
-Le PDS écrit ses données sous `/pds`.
+## Production
 
-Pour un simple test, un Web Service sans disque persistant peut démarrer, mais le filesystem Render est éphémère. Les comptes, dépôts et médias peuvent disparaître lors d'une reconstruction ou d'un redéploiement.
+Conserver le disque persistant existant monté sur `/pds), sans le supprimer ni le réinitialiser. Le mécanisme anti-rejeu local suppose une seule instance PDS. Ne jamais régénérer `PDS_JWT_SECRET), la clé PLC, le mot de passe administrateur ou DPoP sur un PDS existant.
 
-**Ne pas considérer un Web Service sans disque comme une installation de production.**
+## CAPTCHA, OAuth et e-mails
 
-Pour de vrais utilisateurs, il faudra un stockage durable avant l'ouverture publique.
+Le Dockerfile conserve les variables hCaptcha PDS vides et le modèle d'environnement conserve `GATEKEEPER_CREATE_ACCOUNT_CAPTCHA=false`. Le correctif OAuth accepte `same-site`. Les cinq modèles d'e-mails (confirmation, réinitialisation, changement d'adresse, suppression et PLC) utilisent le logo Kelo Social `https://kelosocial.sirv.com/logo.png`.
 
-## Âge / Age Assurance
+## Santé et fédération
 
-AT Protocol ne prévoit pas de date de naissance dans `com.atproto.server.createAccount`. Bluesky applique son système d'Age Assurance au niveau produit/AppView.
-
-Kelo pourra donc demander l'âge ou la date de naissance dans son propre parcours d'inscription avant d'appeler l'API standard du PDS, sans ajouter de champ propriétaire au protocole.
-
-## hCaptcha
-
-Le PDS utilise ses variables natives :
-
-```text
-PDS_HCAPTCHA_SITE_KEY
-PDS_HCAPTCHA_SECRET_KEY
-PDS_HCAPTCHA_TOKEN_SALT
-```
-
-Cela évite d'inventer un proxy d'inscription incompatible avec AT Protocol.
-
-## Fédération
-
-Configuration réseau publique prévue :
-
-```text
-PDS_DID_PLC_URL=https://plc.directory
-PDS_BSKY_APP_VIEW_URL=https://api.bsky.app
-PDS_BSKY_APP_VIEW_DID=did:web:api.bsky.app
-PDS_CRAWLERS=https://bsky.network
-PDS_REPORT_SERVICE_URL=https://mod.bsky.app
-PDS_REPORT_SERVICE_DID=did:plc:ar7c4by46qjdydhdevvrndac
-```
-
-## Fichiers
-
-- `Dockerfile` — image officielle PDS épinglée.
-- `.env.example` — liste des variables à entrer dans Render.
-- `render.yaml` — Blueprint optionnel, non requis pour Web Service manuel.
-- `docs/RENDER_WEB_SERVICE.md` — déploiement manuel Render.
-- `docs/RENDER_SETUP.md` — ancien parcours Blueprint / référence complémentaire.
-- `docs/DNS.md` — DNS du PDS et des handles.
-- `docs/SECURITY.md` — secrets, sauvegardes et production.
-- `docs/AGE_AND_CAPTCHA.md` — âge et hCaptcha.
-
-## Secrets critiques
-
-Une fois de vrais comptes créés, sauvegarder de façon sécurisée :
-
-```text
-PDS_JWT_SECRET
-PDS_ADMIN_PASSWORD
-PDS_PLC_ROTATION_KEY_K256_PRIVATE_KEY_HEX
-PDS_DPOP_SECRET
-```
-
-En particulier, ne pas remplacer arbitrairement la clé PLC après création des identités.
-
-## Healthcheck
-
-Render doit utiliser :
-
-```text
-/xrpc/_health
-```
-
-Le PDS doit être considéré comme prêt uniquement lorsque ce point de contrôle répond correctement.
+Le healthcheck est `/xrpc/_health`. Les connexions par mot de passe classique et mot de passe d'application restent inchangées.
