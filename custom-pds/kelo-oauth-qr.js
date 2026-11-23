@@ -197,7 +197,7 @@ function createKeloOAuthQrRouter(ctx) {
       const query = new URL(req.originalUrl, provider.issuer).searchParams
       const clientId = query.get('client_id')
       const requestUri = query.get('request_uri')
-      if (!clientId || !requestUri) return next()
+      if (!clientId || !requestUri || query.getAll('client_id').length !== 1 || query.getAll('request_uri').length !== 1) return next()
 
       if (String(req.headers['user-agent'] || '').includes('iPhone OS') &&
           readCookie(req, 'cookie-test') !== 'succeeded' &&
@@ -223,6 +223,8 @@ function createKeloOAuthQrRouter(ctx) {
       }
 
       const requestData = await provider.requestManager.get(requestUri, device.deviceId, clientId)
+      const promptModes = String(requestData.parameters.prompt || '').split(' ')
+      if (promptModes.some((mode) => ['none', 'create', 'select_account'].includes(mode))) return next()
       const sessions = await provider.accountManager.listDeviceAccounts(device.deviceId)
       if (sessions.length > 0) return next()
 
