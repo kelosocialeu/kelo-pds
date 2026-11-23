@@ -294,6 +294,7 @@ function createKeloOAuthQrRouter(ctx) {
         alreadyApproved: record.status === 'approved',
         clientName: client.metadata?.client_name || record.clientName || record.clientId,
         clientId: record.clientId, scope: record.scope, loginHint: record.loginHint,
+        accountDid: did, accountHandle: localAccount.handle,
         expiresAt: record.expiresAt,
       })
     } catch (error) {
