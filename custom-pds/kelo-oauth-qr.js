@@ -9,8 +9,7 @@ const oauthProviderEntry = require.resolve('@atproto/oauth-provider', { paths: [
 const oauthTypesPath = require.resolve('@atproto/oauth-types', { paths: [path.dirname(oauthProviderEntry)] })
 const { oauthAuthorizationRequestQuerySchema } = require(oauthTypesPath)
 
-const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
-const TOKEN_TTL_MS = 5 * 60 * 1000
+const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/\nconst MANUAL_CODE_PATTERN = /^[ABCDEFGHJKLMNPQRSTUVWXYZ23456789]{12}$/\nconst CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'\nconst TOKEN_TTL_MS = 5 * 60 * 1000
 const COOKIE_NAME = 'kelo-oauth-bypass'
 let lastPruneAt = 0
 
@@ -23,9 +22,7 @@ function dataDirectory() {
 function requestFile(directory, requestKey) {
   return path.join(directory, 'request-' + requestKey + '.json')
 }
-function tokenFile(directory, tokenHash) {
-  return path.join(directory, 'token-' + tokenHash + '.json')
-}
+function tokenFile(directory, tokenHash) {\n  return path.join(directory, 'token-' + tokenHash + '.json')\n}\nfunction codeFile(directory, codeHash) { return path.join(directory, 'code-' + codeHash + '.json') }\nfunction createManualCode() { let value = ''; for (let index = 0; index < 12; index += 1) value += CODE_ALPHABET[crypto.randomInt(CODE_ALPHABET.length)]; return value.slice(0, 4) + '-' + value.slice(4, 8) + '-' + value.slice(8) }
 function safeEqual(left, right) {
   const a = Buffer.from(String(left || ''), 'utf8')
   const b = Buffer.from(String(right || ''), 'utf8')
@@ -124,13 +121,11 @@ async function createOrReuseChallenge(directory, data) {
     const current = await readJson(file)
     if (current && current.status === 'pending' && current.expiresAt > Date.now() &&
         current.requestUri === data.requestUri && current.clientId === data.clientId &&
-        current.deviceId === data.deviceId) return { ...current, token: current.challengeToken }
+        current.deviceId === data.deviceId) return { ...current, token: current.challengeToken, code: current.manualCode }
 
-    if (current?.challengeHash) await fs.unlink(tokenFile(directory, current.challengeHash)).catch(() => {})
-    const token = crypto.randomBytes(32).toString('base64url')
-    const tokenHash = sha256(token)
+    if (current?.challengeHash) await fs.unlink(tokenFile(directory, current.challengeHash)).catch(() => {})\n    if (current?.codeHash) await fs.unlink(codeFile(directory, current.codeHash)).catch(() => {})\n    const token = crypto.randomBytes(32).toString('base64url')\n    const tokenHash = sha256(token)\n    const manualCode = createManualCode()\n    const codeHash = sha256(manualCode.replace(/-/g, ''))
     const record = {
-      version: 1, requestKey, challengeHash: tokenHash, challengeToken: token,
+      version: 1, requestKey, challengeHash: tokenHash, challengeToken: token,\n      codeHash, manualCode,
       requestUri: data.requestUri, clientId: data.clientId, deviceId: data.deviceId,
       clientName: data.clientName, scope: data.scope || 'atproto',
       loginHint: data.loginHint || null, createdAt: Date.now(),
@@ -138,8 +133,7 @@ async function createOrReuseChallenge(directory, data) {
       approvedDid: null, approvedAt: null, deniedDid: null, deniedAt: null, classic: false,
     }
     await atomicWrite(file, record)
-    await atomicWrite(tokenFile(directory, tokenHash), { requestKey })
-    return { ...record, token }
+    await atomicWrite(tokenFile(directory, tokenHash), { requestKey })\n    await atomicWrite(codeFile(directory, codeHash), { requestKey })\n    return { ...record, token, code: manualCode }
   })
 }
 async function readChallenge(directory, token) {
@@ -151,9 +145,7 @@ async function readChallenge(directory, token) {
   if (!record || record.challengeHash !== tokenHash || record.challengeToken !== token || record.requestKey !== pointer.requestKey) return null
   return record
 }
-async function saveChallenge(directory, record) {
-  await atomicWrite(requestFile(directory, record.requestKey), record)
-}
+async function readManualCode(directory, input) {\n  const normalized = String(input || '').toUpperCase().replace(/[\\s-]/g, '')\n  if (!MANUAL_CODE_PATTERN.test(normalized)) return null\n  const codeHash = sha256(normalized)\n  const pointer = await readJson(codeFile(directory, codeHash))\n  if (!pointer || typeof pointer.requestKey !== 'string' || !/^[0-9a-f]{64}$/.test(pointer.requestKey)) return null\n  const record = await readJson(requestFile(directory, pointer.requestKey))\n  if (!record || record.codeHash !== codeHash || record.requestKey !== pointer.requestKey || String(record.manualCode || '').replace(/-/g, '') !== normalized) return null\n  return record\n}\nasync function saveChallenge(directory, record) { await atomicWrite(requestFile(directory, record.requestKey), record) }
 function validateBrowserNavigation(req, issuer) {
   const mode = req.headers['sec-fetch-mode']
   const destination = req.headers['sec-fetch-dest']
@@ -175,15 +167,14 @@ function sendIosCookieTest(req, res, issuer) {
   res.setHeader('Set-Cookie', 'cookie-test=testing; Path=/; HttpOnly; Secure; SameSite=Lax')
   res.end('<!doctype html><html lang="fr"><meta charset="utf-8"><title>Vérification du navigateur</title><body><form id="kelo-cookie-test" method="get" action="' + action + '"></form><script>document.getElementById("kelo-cookie-test").submit()</script></body></html>')
 }
-function renderAuthorizationPage(res, token, record, qrDataUrl) {
+function renderQrAuthorizationPage(res, token, record, qrDataUrl) {
   const classicUrl = '/kelo-id/oauth/continue?mode=classic&challenge=' + encodeURIComponent(token)
   const statusUrl = '/kelo-id/oauth/qr/status?challenge=' + encodeURIComponent(token)
   const resumeUrl = '/kelo-id/oauth/continue?mode=resume&challenge=' + encodeURIComponent(token)
   const clientName = escapeHtml(record.clientName || record.clientId)
   const clientId = escapeHtml(record.clientId)
   const scope = escapeHtml(record.scope)
-  const image = escapeHtml(qrDataUrl)
-  const script = [
+  const image = escapeHtml(qrDataUrl)\n  const manualCode = escapeHtml(record.manualCode || '')\n  const script = [
     'const statusUrl=' + JSON.stringify(statusUrl) + ';',
     'const resumeUrl=' + JSON.stringify(resumeUrl) + ';',
     'const statusNode=document.getElementById("kelo-status");',
@@ -205,7 +196,7 @@ function renderAuthorizationPage(res, token, record, qrDataUrl) {
   res.status(200).type('html').send(html)
 }
 
-function createKeloOAuthQrRouter(ctx) {
+function renderLoginChoicePage(res, token, record) {\n  const keloUrl = '/kelo-id/oauth/qr/page?challenge=' + encodeURIComponent(token)\n  const classicUrl = '/kelo-id/oauth/continue?mode=classic&challenge=' + encodeURIComponent(token)\n  const clientName = escapeHtml(record.clientName || record.clientId), clientId = escapeHtml(record.clientId), scope = escapeHtml(record.scope)\n  const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connexion · Kelo PDS</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#f4f6fb;color:#172033;font:16px/1.5 system-ui;display:grid;place-items:center;padding:24px}.card{width:min(100%,500px);background:#fff;border:1px solid #e5e9f2;border-radius:24px;padding:32px;box-shadow:0 18px 55px #17203312;text-align:center}.brand{font-weight:750;color:#315df5}h1{font-size:28px}.muted{color:#667085}.client{background:#f7f8fc;border-radius:14px;padding:12px;margin:18px 0;text-align:left;overflow-wrap:anywhere}.client strong{display:block}.button{display:block;text-decoration:none;border-radius:12px;padding:14px 18px;font-weight:700;margin-top:14px}.primary{background:#315df5;color:white}.secondary{border:1px solid #d9deea;color:#344054}</style></head><body><main class="card"><div class="brand">KELO SOCIAL · PDS</div><h1>Connexion à Kelo PDS</h1><p class="muted">Choisissez votre méthode de connexion. Vous pouvez utiliser Kelo ID ou vos identifiants habituels.</p><div class="client"><strong>' + clientName + '</strong><span>' + clientId + '</span><p>Autorisations demandées : ' + scope + '</p></div><a class="button primary" href="' + keloUrl + '">Se connecter avec Kelo ID</a><a class="button secondary" href="' + classicUrl + '">Se connecter avec identifiant et mot de passe</a></main></body></html>'\n  res.setHeader('Cache-Control', 'no-store, private'); res.setHeader('Pragma', 'no-cache'); res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"); res.status(200).type('html').send(html)\n}\n\nfunction createKeloOAuthQrRouter(ctx) {
   const router = express.Router()
   const provider = ctx.oauthProvider
   router.use('/kelo-id', express.json({ limit: '4kb' }))
@@ -246,9 +237,6 @@ function createKeloOAuthQrRouter(ctx) {
       const requestData = await provider.requestManager.get(requestUri, device.deviceId, clientId)
       const promptModes = String(requestData.parameters.prompt || '').split(' ')
       if (promptModes.some((mode) => ['none', 'create', 'select_account'].includes(mode))) return next()
-      const sessions = await provider.accountManager.listDeviceAccounts(device.deviceId)
-      if (sessions.length > 0) return next()
-
       const client = await provider.clientManager.getClient(clientId)
       const directory = await ensureDirectory()
       const record = await createOrReuseChallenge(directory, {
@@ -259,23 +247,17 @@ function createKeloOAuthQrRouter(ctx) {
       })
       const token = record.token
       if (!token) throw new Error('Unable to restore the pending OAuth QR token')
-      const qrDataUrl = await QRCode.toDataURL(token, {
-        errorCorrectionLevel: 'M', margin: 2, width: 260,
-      })
-      return renderAuthorizationPage(res, token, record, qrDataUrl)
+      return renderLoginChoicePage(res, token, record)
     } catch (error) {
       return next(error)
     }
   })
 
-  router.get('/kelo-id/oauth/qr', async (req, res) => {
+  router.get('/kelo-id/oauth/qr/page', async (req, res) => {\n    try {\n      const token = String(req.query.challenge || ''), directory = await ensureDirectory(), record = await readChallenge(directory, token)\n      if (!record || record.expiresAt <= Date.now() || record.status !== 'pending') return res.status(410).send('Cette demande de connexion a expiré. Relancez la connexion depuis votre application.')\n      const device = await provider.deviceManager.load(req, res)\n      if (device.deviceId !== record.deviceId) return res.status(403).send('Cette demande appartient à un autre navigateur.')\n      const qrDataUrl = await QRCode.toDataURL(token, { errorCorrectionLevel: 'M', margin: 2, width: 260 })\n      return renderQrAuthorizationPage(res, token, record, qrDataUrl)\n    } catch (error) { return res.status(400).send(escapeHtml(error instanceof Error ? error.message : 'Impossible de créer le QR code.')) }\n  })\n\n  router.get('/kelo-id/oauth/qr', async (req, res) => {
     res.setHeader('Cache-Control', 'no-store, private')
     if (!getApiKey(req, res)) return
     try {
-      const token = String(req.query.challenge || '')
-      const did = String(req.query.did || '')
-      const directory = await ensureDirectory()
-      const record = await readChallenge(directory, token)
+      const token = String(req.query.challenge || ''), code = String(req.query.code || ''), did = String(req.query.did || '')\n      const directory = await ensureDirectory()\n      const record = token ? await readChallenge(directory, token) : await readManualCode(directory, code)
       if (!record) return res.status(404).json({ error: 'QR de connexion introuvable.' })
       if (record.expiresAt <= Date.now()) return res.status(410).json({ error: 'Ce QR a expiré.' })
       if (record.status === 'approved') {
@@ -311,17 +293,10 @@ function createKeloOAuthQrRouter(ctx) {
     res.setHeader('Cache-Control', 'no-store, private')
     if (!getApiKey(req, res)) return
     try {
-      const token = String(req.body?.challenge || '')
-      const did = String(req.body?.did || '')
-      const action = String(req.body?.action || 'approve')
+      const token = String(req.body?.challenge || ''), code = String(req.body?.code || '')\n      const did = String(req.body?.did || ''), action = String(req.body?.action || 'approve')
       if (!/^did:(plc|web):[A-Za-z0-9._:%-]+$/.test(did)) return res.status(400).json({ error: 'DID invalide.' })
       if (!['approve', 'deny'].includes(action)) return res.status(400).json({ error: 'Action invalide.' })
-      const directory = await ensureDirectory()
-      const initial = await readChallenge(directory, token)
-      if (!initial) return res.status(404).json({ error: 'QR de connexion introuvable.' })
-
-      const result = await withRequestLock(directory, initial.requestKey, async () => {
-        const record = await readChallenge(directory, token)
+      const directory = await ensureDirectory()\n      const initial = token ? await readChallenge(directory, token) : await readManualCode(directory, code)\n      if (!initial) return res.status(404).json({ error: 'QR ou code de connexion introuvable.' })\n\n      const result = await withRequestLock(directory, initial.requestKey, async () => {\n        const record = token ? await readChallenge(directory, token) : await readManualCode(directory, code)
         if (!record) return { status: 404, error: 'QR de connexion introuvable.' }
         if (record.expiresAt <= Date.now()) return { status: 410, error: 'Ce QR a expiré.' }
         if (record.status === 'approved') {
