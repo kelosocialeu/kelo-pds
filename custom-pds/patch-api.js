@@ -39,7 +39,7 @@ if (compressionMatches.length !== 1) {
   throw new Error('Expected exactly one compiled PDS compression middleware mount; found ' + compressionMatches.length + '. Refusing to guess middleware order.')
 }
 
-const authAnchor = /app\.use\(\s*(?:\(0,\s*)?[\w$]*authRoutes[\w$]*\.createRouter\(ctx\)\s*\)\s*;/g
+const authAnchor = /app\.use\(\s*(?:\(0,\s*)?[\w$]*auth[\w$]*\.createRouter\)?\s*\(ctx\)\s*\)\s*;/g
 const authMatches = [...source.matchAll(authAnchor)]
 if (authMatches.length !== 1) {
   throw new Error('Expected exactly one PDS OAuth/auth router mount; found ' + authMatches.length + '. Refusing to guess middleware order.')
