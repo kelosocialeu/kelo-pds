@@ -24,6 +24,10 @@ async function run() {
       clientId: 'https://client.example/metadata.json',
       parameters: { scope: 'atproto repo', login_hint: 'alice.kelosocial.eu', prompt: undefined },
     }],
+    ['urn:ietf:params:oauth:request_uri:manual', {
+      clientId: 'https://client.example/metadata.json',
+      parameters: { scope: 'atproto repo', login_hint: 'alice.kelosocial.eu', prompt: undefined },
+    }],
     ['urn:ietf:params:oauth:request_uri:classic', {
       clientId: 'https://client.example/metadata.json',
       parameters: { scope: 'atproto', login_hint: null, prompt: undefined },
@@ -152,8 +156,19 @@ async function run() {
     assert.equal(firstPage.status, 200)
     const firstHtml = await firstPage.text()
     assert.match(firstHtml, /Application de test/)
-    assert.match(firstHtml, /Utiliser mon identifiant et mon mot de passe/)
+    assert.match(firstHtml, /Se connecter avec Kelo ID/)
+    assert.match(firstHtml, /Se connecter avec identifiant et mot de passe/)
     const firstToken = tokenFromHtml(firstHtml)
+
+    const qrPage = await get('/kelo-id/oauth/qr/page?challenge=' + firstToken, {
+      headers: { Cookie: browserCookie },
+    })
+    assert.equal(qrPage.status, 200)
+    const qrHtml = await qrPage.text()
+    assert.match(qrHtml, /Ou saisissez ce code dans Kelo ID/)
+    const manualCodeMatch = qrHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})<\\/strong>/)
+    assert.ok(manualCodeMatch, 'The QR page must display a formatted 12-character one-time code')
+    const manualCode = manualCodeMatch[1]
 
     const details = await get(
       '/kelo-id/oauth/qr?challenge=' + firstToken + '&did=did%3Aplc%3Aalice',
@@ -209,6 +224,40 @@ async function run() {
     )
     assert.equal(resumed.status, 200)
     assert.equal(await resumed.text(), 'UPSTREAM_OAUTH')
+
+    // A browser that already has a PDS account must still be offered Kelo ID.
+    const existingSessionPage = await get(
+      '/oauth/authorize?client_id=' + encodeURIComponent('https://client.example/metadata.json') +
+      '&request_uri=' + encodeURIComponent('urn:ietf:params:oauth:request_uri:manual'),
+      { headers: { ...navHeaders, Cookie: browserCookie } },
+    )
+    assert.equal(existingSessionPage.status, 200)
+    const existingHtml = await existingSessionPage.text()
+    assert.match(existingHtml, /Se connecter avec Kelo ID/, 'Existing PDS sessions must not hide the Kelo ID option')
+    const manualToken = tokenFromHtml(existingHtml)
+    const manualQrPage = await get('/kelo-id/oauth/qr/page?challenge=' + manualToken, {
+      headers: { Cookie: browserCookie },
+    })
+    assert.equal(manualQrPage.status, 200)
+    const manualHtml = await manualQrPage.text()
+    const codeMatch = manualHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})<\\/strong>/)
+    assert.ok(codeMatch)
+    const codeDetails = await get('/kelo-id/oauth/qr?code=' + codeMatch[1] + '&did=did%3Aplc%3Aalice', { headers: apiHeaders })
+    assert.equal(codeDetails.status, 200)
+    assert.equal((await codeDetails.json()).accountDid, 'did:plc:alice')
+    const codeApproval = await get('/kelo-id/oauth/qr/approve', {
+      method: 'POST',
+      headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: codeMatch[1], did: 'did:plc:alice', action: 'approve' }),
+    })
+    assert.equal(codeApproval.status, 200)
+    assert.equal((await codeApproval.json()).approved, true)
+    const codeReplay = await get('/kelo-id/oauth/qr/approve', {
+      method: 'POST',
+      headers: { ...apiHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: codeMatch[1], did: 'did:plc:other', action: 'approve' }),
+    })
+    assert.equal(codeReplay.status, 409, 'A manual code must not be reusable by another DID')
 
     const classicPage = await get(
       '/oauth/authorize?client_id=' + encodeURIComponent('https://client.example/metadata.json') +
