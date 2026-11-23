@@ -146,8 +146,8 @@ function validateBrowserNavigation(req, issuer) {
   if (origin && origin !== new URL(issuer).origin) return false
   return true
 }
-function sendIosCookieTest(req, res) {
-  const target = new URL(req.originalUrl, req.protocol + '://' + req.get('host'))
+function sendIosCookieTest(req, res, issuer) {
+  const target = new URL(req.originalUrl, issuer)
   target.searchParams.set('redirect-test', '1')
   const action = escapeHtml(target.pathname + target.search)
   res.setHeader('Cache-Control', 'no-store')
@@ -202,7 +202,7 @@ function createKeloOAuthQrRouter(ctx) {
       if (String(req.headers['user-agent'] || '').includes('iPhone OS') &&
           readCookie(req, 'cookie-test') !== 'succeeded' &&
           !(await provider.deviceManager.hasSession(req))) {
-        if (!query.has('redirect-test')) return sendIosCookieTest(req, res)
+        if (!query.has('redirect-test')) return sendIosCookieTest(req, res, provider.issuer)
         if (readCookie(req, 'cookie-test')) {
           res.append('Set-Cookie', 'cookie-test=succeeded; Path=/; Max-Age=2678400; HttpOnly; Secure; SameSite=Lax')
         } else {
@@ -363,7 +363,7 @@ function createKeloOAuthQrRouter(ctx) {
         const record = await readChallenge(directory, token)
         if (!record || record.expiresAt <= Date.now()) return { error: 'QR introuvable ou expiré.' }
         if (mode === 'classic') {
-          if (record.status !== 'pending') return { error: 'Cette demande n’est plus disponible.' }
+          if (record.status !== 'pending' && record.status !== 'denied') return { error: 'Cette demande n’est plus disponible.' }
           record.status = 'cancelled'
           record.classic = true
           await saveChallenge(directory, record)
