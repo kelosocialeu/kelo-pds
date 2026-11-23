@@ -142,7 +142,7 @@ async function run() {
     })
   }
   function tokenFromHtml(html) {
-    const match = html.match(/status\?challenge=([A-Za-z0-9_-]{43})/)
+    const match = html.match(/qr.page\?challenge=([A-Za-z0-9_-]{43})/)
     assert.ok(match, 'OAuth page must contain a one-time QR challenge')
     return match[1]
   }
@@ -166,7 +166,7 @@ async function run() {
     assert.equal(qrPage.status, 200)
     const qrHtml = await qrPage.text()
     assert.match(qrHtml, /Ou saisissez ce code dans Kelo ID/)
-    const manualCodeMatch = qrHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})<\\/strong>/)
+    const manualCodeMatch = qrHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})</)
     assert.ok(manualCodeMatch, 'The QR page must display a formatted 12-character one-time code')
     const manualCode = manualCodeMatch[1]
 
@@ -240,7 +240,7 @@ async function run() {
     })
     assert.equal(manualQrPage.status, 200)
     const manualHtml = await manualQrPage.text()
-    const codeMatch = manualHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})<\\/strong>/)
+    const codeMatch = manualHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})</)
     assert.ok(codeMatch)
     const codeDetails = await get('/kelo-id/oauth/qr?code=' + codeMatch[1] + '&did=did%3Aplc%3Aalice', { headers: apiHeaders })
     assert.equal(codeDetails.status, 200)
