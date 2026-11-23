@@ -41,7 +41,7 @@ async function run() {
     assert.match(indexSource, /app\.post\('\/kelo-id\/login-proof'/)
     assert.match(indexSource, /PDS_KELO_ID_API_KEY/)
     assert.match(indexSource, /PDS_JWT_SECRET/)
-    assert.match(indexSource, /app\.use\(require\('\/app\/kelo-oauth-qr'\)\(ctx\)\)/, 'OAuth QR middleware must be mounted')
+    assert.match(indexSource, /app\.use\(require\('\.\/kelo-oauth-qr'\)\(ctx\)\)/, 'OAuth QR middleware must be mounted')
     assert.equal((indexSource.match(/kelo-oauth-qr/g) || []).length, 1)
     assert.doesNotMatch(indexSource, /PDS_KELO_ID_PROOF_SECRET/)
   } finally {
