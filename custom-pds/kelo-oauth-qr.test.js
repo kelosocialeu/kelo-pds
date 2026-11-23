@@ -36,6 +36,10 @@ async function run() {
       clientId: 'https://client.example/metadata.json',
       parameters: { scope: 'atproto', login_hint: null, prompt: 'none' },
     }],
+    ['urn:ietf:params:oauth:request_uri:native-brand', {
+      clientId: 'https://client.example/metadata.json',
+      parameters: { scope: 'atproto', login_hint: null, prompt: 'none' },
+    }],
   ])
 
   const provider = {
@@ -95,7 +99,12 @@ async function run() {
 
   const app = express()
   app.use(createRouter(ctx))
-  app.get('/oauth/authorize', (_req, res) => res.status(200).send('UPSTREAM_OAUTH'))
+  app.get('/oauth/authorize', (req, res) => {
+    if (req.query.request_uri === 'urn:ietf:params:oauth:request_uri:native-brand') {
+      return res.type('html').set('Content-Security-Policy', \"default-src 'none'; img-src 'self'\").send('<!doctype html><html><body><form>Connexion PDS</form></body></html>')
+    }
+    return res.status(200).send('UPSTREAM_OAUTH')
+  })
   const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const address = server.address()
@@ -158,6 +167,9 @@ async function run() {
     assert.match(firstHtml, /Application de test/)
     assert.match(firstHtml, /Se connecter avec Kelo ID/)
     assert.match(firstHtml, /Se connecter avec identifiant et mot de passe/)
+    assert.match(firstHtml, /kelosocial\\.sirv\\.com\\/logo\\.png/)
+    assert.match(firstHtml, /kelosocial\\.sirv\\.com\\/logoid\\.png/)
+    assert.match(firstHtml, /@media\\(max-width:760px\\)/)
     const firstToken = tokenFromHtml(firstHtml)
 
     const qrPage = await get('/kelo-id/oauth/qr/page?challenge=' + firstToken, {
@@ -165,7 +177,9 @@ async function run() {
     })
     assert.equal(qrPage.status, 200)
     const qrHtml = await qrPage.text()
-    assert.match(qrHtml, /Ou saisissez ce code dans Kelo ID/)
+    assert.match(qrHtml, /Saisissez ce code dans Kelo ID/)
+    assert.match(qrHtml, /kelosocial\\.sirv\\.com\\/logo\\.png/)
+    assert.match(qrHtml, /@media\\(max-width:760px\\)/)
     const manualCodeMatch = qrHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})</)
     assert.ok(manualCodeMatch, 'The QR page must display a formatted 12-character one-time code')
     const manualCode = manualCodeMatch[1]
@@ -278,6 +292,17 @@ async function run() {
       { headers: { ...navHeaders, Cookie: secondDeviceCookie + '; kelo-oauth-bypass=' + classicBypass[1] } },
     )
     assert.equal(await classicUpstream.text(), 'UPSTREAM_OAUTH')
+
+    const nativeBrand = await get(
+      '/oauth/authorize?client_id=' + encodeURIComponent('https://client.example/metadata.json') +
+      '&request_uri=' + encodeURIComponent('urn:ietf:params:oauth:request_uri:native-brand'),
+      { headers: { ...navHeaders, Cookie: secondDeviceCookie } },
+    )
+    assert.equal(nativeBrand.status, 200)
+    const nativeHtml = await nativeBrand.text()
+    assert.match(nativeHtml, /kelo-native-brand/)
+    assert.match(nativeHtml, /kelosocial\\.sirv\\.com\\/logo\\.png/)
+    assert.match(nativeBrand.headers.get('content-security-policy'), /kelosocial\\.sirv\\.com/)
 
     const silent = await get(
       '/oauth/authorize?client_id=' + encodeURIComponent('https://client.example/metadata.json') +
