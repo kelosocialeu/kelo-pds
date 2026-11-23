@@ -307,7 +307,7 @@ function brandNativeLoginPage(req, res, next) {
     let output = body
     const contentType = String(res.getHeader('Content-Type') || '')
     if (req.path === '/oauth/authorize' && typeof body === 'string' &&
-        contentType.includes('text/html') && !body.includes('kelo-native-brand')) {
+        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\\b/i.test(body)) && !body.includes('kelo-native-brand')) {
       const header = '<header class="kelo-native-brand" role="banner"><a href="https://kelosocial.eu" aria-label="Kelo Social"><img src="https://kelosocial.sirv.com/logo.png" width="42" height="42" alt="Logo Kelo Social"></a><strong>KELO SOCIAL <span>· PDS</span></strong></header>'
       output = body.replace(/<body([^>]*)>/i, (match) => match + header)
       const policy = String(res.getHeader('Content-Security-Policy') || '')
