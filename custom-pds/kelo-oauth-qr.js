@@ -87,8 +87,6 @@ async function withRequestLock(directory, requestKey, callback) {
     lock = await fs.open(lockPath, 'wx', 0o600)
   } catch (error) {
     if (error && error.code === 'EEXIST') {
-      const current = await readJson(requestFile(directory, requestKey))
-      if (current && current.status === 'pending' && current.expiresAt > Date.now()) return current
       throw Object.assign(new Error('OAuth QR request is busy; retry shortly'), { status: 409 })
     }
     throw error
@@ -107,13 +105,13 @@ async function createOrReuseChallenge(directory, data) {
     const current = await readJson(file)
     if (current && current.status === 'pending' && current.expiresAt > Date.now() &&
         current.requestUri === data.requestUri && current.clientId === data.clientId &&
-        current.deviceId === data.deviceId) return { ...current, token: data.token || null }
+        current.deviceId === data.deviceId) return { ...current, token: current.challengeToken }
 
     if (current?.challengeHash) await fs.unlink(tokenFile(directory, current.challengeHash)).catch(() => {})
     const token = crypto.randomBytes(32).toString('base64url')
     const tokenHash = sha256(token)
     const record = {
-      version: 1, requestKey, challengeHash: tokenHash,
+      version: 1, requestKey, challengeHash: tokenHash, challengeToken: token,
       requestUri: data.requestUri, clientId: data.clientId, deviceId: data.deviceId,
       clientName: data.clientName, scope: data.scope || 'atproto',
       loginHint: data.loginHint || null, createdAt: Date.now(),
@@ -131,7 +129,7 @@ async function readChallenge(directory, token) {
   const pointer = await readJson(tokenFile(directory, tokenHash))
   if (!pointer || typeof pointer.requestKey !== 'string' || !/^[0-9a-f]{64}$/.test(pointer.requestKey)) return null
   const record = await readJson(requestFile(directory, pointer.requestKey))
-  if (!record || record.challengeHash !== tokenHash || record.requestKey !== pointer.requestKey) return null
+  if (!record || record.challengeHash !== tokenHash || record.challengeToken !== token || record.requestKey !== pointer.requestKey) return null
   return record
 }
 async function saveChallenge(directory, record) {
@@ -224,7 +222,7 @@ function createKeloOAuthQrRouter(ctx) {
         }
       }
 
-      await provider.requestManager.get(requestUri, device.deviceId, clientId)
+      const requestData = await provider.requestManager.get(requestUri, device.deviceId, clientId)
       const sessions = await provider.accountManager.listDeviceAccounts(device.deviceId)
       if (sessions.length > 0) return next()
 
@@ -233,8 +231,8 @@ function createKeloOAuthQrRouter(ctx) {
       const record = await createOrReuseChallenge(directory, {
         requestUri, clientId, deviceId: device.deviceId,
         clientName: client.metadata?.client_name || clientId,
-        scope: query.get('scope') || 'atproto',
-        loginHint: query.get('login_hint') || null,
+        scope: requestData.parameters.scope || 'atproto',
+        loginHint: requestData.parameters.login_hint || null,
       })
       const token = record.token
       if (!token) throw new Error('Unable to restore the pending OAuth QR token')
