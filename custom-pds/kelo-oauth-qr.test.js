@@ -130,6 +130,8 @@ async function run() {
     assert.equal(detailsJson.purpose, 'kelo_pds_oauth')
     assert.equal(detailsJson.clientName, 'Application de test')
     assert.equal(detailsJson.scope, 'atproto repo')
+    assert.equal(detailsJson.accountDid, 'did:plc:alice')
+    assert.equal(detailsJson.accountHandle, 'alice.kelosocial.eu')
 
     const approval = await get('/kelo-id/oauth/qr/approve', {
       method: 'POST',
