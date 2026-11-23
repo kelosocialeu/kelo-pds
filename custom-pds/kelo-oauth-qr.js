@@ -302,12 +302,30 @@ function renderLoginChoicePage(res, token, record) {
 }
 
 const NATIVE_LOGIN_CSS = [
-  '.kelo-native-brand{display:flex;align-items:center;gap:12px;width:min(calc(100% - 32px),520px);margin:22px auto 26px;padding:13px 17px;background:#fff;border:1px solid #e6eaf2;border-radius:18px;box-shadow:0 12px 34px #17203312;color:#172033;font:800 16px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:-.025em}',
+  '*,*::before,*::after{box-sizing:border-box}',
+  'html{min-height:100%;background:#f6f8fc}',
+  'body{min-height:100vh;margin:0;padding:clamp(16px,3vw,36px);display:flex;flex-direction:column;color:#172033;font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 12% 8%,#e7edff 0,transparent 34%),radial-gradient(ellipse at 92% 90%,#eee9ff 0,transparent 32%),#f6f8fc}',
+  '.kelo-native-brand{display:flex;align-items:center;gap:12px;width:min(100%,1080px);margin:0 auto 22px;padding:12px 16px;background:#ffffffd9;border:1px solid #e6eaf2;border-radius:18px;box-shadow:0 12px 34px #17203312;color:#172033;font:800 16px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:-.025em;backdrop-filter:blur(12px)}',
   '.kelo-native-brand a{display:flex;align-items:center;flex:0 0 auto}',
   '.kelo-native-brand img{display:block;width:42px;height:42px;object-fit:contain;border-radius:12px}',
   '.kelo-native-brand strong{display:block}',
   '.kelo-native-brand strong span{color:#667085;font-weight:650}',
-  '@media(max-width:560px){.kelo-native-brand{width:100%;margin:0 auto 18px;padding:11px 13px;border-radius:14px}.kelo-native-brand img{width:36px;height:36px}}'
+  'body:has(form)>div:not(.kelo-native-brand){width:min(100%,1080px);flex:1;margin:auto;display:flex;align-items:center;justify-content:center}',
+  'body:has(form) h1{color:#26345b;font-size:clamp(30px,4vw,46px);font-weight:800;letter-spacing:-.055em;line-height:1.08}',
+  'body:has(form) form{width:min(100%,620px);padding:clamp(22px,3vw,36px);background:#fff;border:1px solid #e7eaf2;border-radius:26px;box-shadow:0 24px 70px #17203312,0 3px 12px #17203308}',
+  'body:has(form) label{display:block;margin:0 0 7px;color:#344064;font-size:13px;font-weight:700}',
+  'body:has(form) input:not([type=checkbox]):not([type=radio]):not([type=hidden]){width:100%;min-height:50px;padding:12px 15px;border:1px solid #dfe4ee;border-radius:12px;background:#f8f9fd;color:#172033;font:500 15px/1.4 inherit;outline:none;transition:border-color .16s ease,box-shadow .16s ease,background .16s ease}',
+  'body:has(form) input:not([type=checkbox]):not([type=radio]):not([type=hidden]):focus{border-color:#7050ef;background:#fff;box-shadow:0 0 0 4px #7050ef20}',
+  'body:has(form) input[type=checkbox],body:has(form) input[type=radio]{accent-color:#654fe8}',
+  'body:has(form) button[type=submit],body:has(form) input[type=submit]{min-height:50px;padding:12px 24px;border:0;border-radius:12px;background:linear-gradient(110deg,#2563eb,#7048ef);color:#fff;font:750 15px/1.2 inherit;box-shadow:0 10px 24px #315df532;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease}',
+  'body:has(form) button[type=submit]:hover,body:has(form) input[type=submit]:hover{transform:translateY(-1px);box-shadow:0 13px 28px #315df545}',
+  'body:has(form) button:focus-visible,body:has(form) a:focus-visible{outline:3px solid #7050ef66;outline-offset:3px}',
+  'body:has(form) [role=alert],body:has(form) .warning{padding:13px 15px;border:1px solid #f1d8a7;border-radius:12px;background:#fff8e9;color:#76521c;font-size:13px;line-height:1.5}',
+  'body:has(form) a{color:#5544d8;font-weight:650;text-underline-offset:3px}',
+  'body:has(form) form>div{margin-bottom:16px}',
+  '@media(max-width:760px){body{padding:14px;min-height:100svh}.kelo-native-brand{margin:0 auto 18px;padding:11px 13px;border-radius:14px}.kelo-native-brand img{width:38px;height:38px}body:has(form)>div:not(.kelo-native-brand){width:100%;align-items:flex-start;padding-top:clamp(24px,8vh,64px)}body:has(form) form{width:100%;padding:22px;border-radius:22px}body:has(form) h1{font-size:clamp(28px,8vw,36px)}}',
+  '@media(max-width:390px){body{padding:10px}.kelo-native-brand{gap:9px;font-size:14px}.kelo-native-brand img{width:34px;height:34px}body:has(form) form{padding:18px}}',
+  '@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important}}'
 ].join('\n')
 
 function brandNativeLoginPage(req, res, next) {
