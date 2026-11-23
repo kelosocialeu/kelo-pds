@@ -369,7 +369,18 @@ function brandNativeLoginPage(req, res, next) {
       }
       output = isBuffer ? Buffer.from(branded, 'utf8') : branded
     }
-    return originalEnd.call(this, output, encoding, callback)
+    // Preserve Node's original end() overload and argument count. Some
+    // response implementations distinguish end(chunk) from end(chunk, enc, cb).
+    if (typeof encoding === 'function') {
+      return originalEnd.call(this, output, encoding)
+    }
+    if (callback !== undefined) {
+      return originalEnd.call(this, output, encoding, callback)
+    }
+    if (encoding !== undefined) {
+      return originalEnd.call(this, output, encoding)
+    }
+    return originalEnd.call(this, output)
   }
   next()
 }
