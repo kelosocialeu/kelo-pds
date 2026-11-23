@@ -10,6 +10,7 @@ Configuration du Personal Data Server AT Protocol de Kelo Social, conçue pour f
 - Permettre des handles comme `nom.kelosocial.eu`.
 - Utiliser le hCaptcha natif du PDS pour la création de comptes.
 - Accepter une preuve de connexion Kelo ID signée par le PDS, sans remplacer les mots de passe classiques ni les mots de passe d’application.
+- Autoriser les connexions OAuth Kelo PDS par QR depuis l’application Kelo ID, avec reprise de la demande OAuth d’origine.
 - Réserver l’émission des preuves à une API serveur-à-serveur authentifiée, avec expiration courte et anti-rejeu persistant.
 - Activer SMTP, fédération, rate limiting, protection SSRF, healthcheck et logs.
 
@@ -51,6 +52,8 @@ Le PDS expose `POST /kelo-id/login-proof`, réservé aux appels serveur-à-serve
 Format : `kelo-proof:v1:<expiration>:<nonce>:<signature>`. Le HMAC-SHA256 porte sur `v1|<DID>|<expiration>|<nonce>`. La clé HMAC est dérivée dans le PDS exactement comme avant : `HMAC-SHA256(PDS_JWT_SECRET, "kelo-id-login-proof-v1")`, digest binaire. La durée est de 60 secondes et le nonce est à usage unique sur le volume persistant `/pds`. La clé dérivée ne quitte jamais le PDS. Kelo ID ne reçoit que la preuve et son expiration.
 
 Le contrat HTTP, les codes d'erreur et les tests sont décrits dans `docs/KELO_ID_LOGIN_PROOF.md`.
+
+Le parcours OAuth QR, ses protections, son périmètre et les étapes de déploiement sont décrits dans `docs/KELO_ID_OAUTH_QR.md`.
 
 ## Important : stockage Render
 
