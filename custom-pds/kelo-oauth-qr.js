@@ -301,8 +301,35 @@ function renderLoginChoicePage(res, token, record) {
   res.status(200).type('html').send(html)
 }
 
+function brandNativeLoginPage(req, res, next) {
+  const originalSend = res.send
+  res.send = function (body, ...args) {
+    let output = body
+    const contentType = String(res.getHeader('Content-Type') || '')
+    if (req.path === '/oauth/authorize' && typeof body === 'string' &&
+        contentType.includes('text/html') && !body.includes('kelo-native-brand')) {
+      const header = '<header class="kelo-native-brand" role="banner"><a href="https://kelosocial.eu" aria-label="Kelo Social"><img src="https://kelosocial.sirv.com/logo.png" width="42" height="42" alt="Logo Kelo Social"></a><strong>KELO SOCIAL <span>· PDS</span></strong></header>'
+      output = body.replace(/<body([^>]*)>/i, (match) => match + header)
+      const policy = String(res.getHeader('Content-Security-Policy') || '')
+      if (policy) {
+        const directives = policy.split(';').map((part) => part.trim()).filter(Boolean)
+        const imageIndex = directives.findIndex((part) => /^img-src\\s/i.test(part))
+        if (imageIndex >= 0) {
+          if (!directives[imageIndex].includes('https://kelosocial.sirv.com')) directives[imageIndex] += ' https://kelosocial.sirv.com'
+        } else {
+          directives.push("img-src 'self' data: https://kelosocial.sirv.com")
+        }
+        res.setHeader('Content-Security-Policy', directives.join('; '))
+      }
+    }
+    return originalSend.call(this, output, ...args)
+  }
+  next()
+}
+
 function createKeloOAuthQrRouter(ctx) {
   const router = express.Router()
+  router.use(brandNativeLoginPage)
   const provider = ctx.oauthProvider
   router.use('/kelo-id', express.json({ limit: '4kb' }))
 
