@@ -329,25 +329,37 @@ const NATIVE_LOGIN_CSS = [
 ].join('\n')
 
 function brandNativeLoginPage(req, res, next) {
-  const originalSend = res.send
-  res.send = function (body, ...args) {
-    let output = body
+  // The upstream OAuth authorization page writes HTML with res.end() in some
+  // PDS builds, bypassing an interception of res.send() alone.
+  const originalEnd = res.end
+  res.end = function (chunk, encoding, callback) {
+    let output = chunk
     const contentType = String(res.getHeader('Content-Type') || '')
-    if (req.path === '/oauth/authorize' && typeof body === 'string' &&
-        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\b/i.test(body)) && !body.includes('kelo-native-brand')) {
+    const isBuffer = Buffer.isBuffer(chunk)
+    const html = typeof chunk === 'string' ? chunk : isBuffer ? chunk.toString('utf8') : null
+    if (req.path === '/oauth/authorize' && html &&
+        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\\b/i.test(html)) &&
+        !html.includes('kelo-native-brand')) {
       const header = '<header class="kelo-native-brand" role="banner"><a href="https://kelosocial.eu" aria-label="Kelo Social"><img src="https://kelosocial.sirv.com/logo.png" width="42" height="42" alt="Logo Kelo Social"></a><strong>KELO SOCIAL <span>· PDS</span></strong></header>'
-      output = body.replace(/<head([^>]*)>/i, (match) => match + '<link rel="stylesheet" href="/kelo-id/login.css">')
-      output = output.replace(/<body([^>]*)>/i, (match) => match + header)
+      let branded = html
+      if (/<head(?:\\s[^>]*)?>/i.test(branded)) {
+        branded = branded.replace(/<head([^>]*)>/i, (match) => match + '<link rel="stylesheet" href="/kelo-id/login.css">')
+      } else {
+        branded = branded.replace(/<html([^>]*)>/i, (match) => match + '<head><link rel="stylesheet" href="/kelo-id/login.css"></head>')
+      }
+      if (/<body(?:\\s[^>]*)?>/i.test(branded)) {
+        branded = branded.replace(/<body([^>]*)>/i, (match) => match + header)
+      }
       const policy = String(res.getHeader('Content-Security-Policy') || '')
       if (policy) {
         const directives = policy.split(';').map((part) => part.trim()).filter(Boolean)
-        const imageIndex = directives.findIndex((part) => /^img-src\s/i.test(part))
+        const imageIndex = directives.findIndex((part) => /^img-src\\s/i.test(part))
         if (imageIndex >= 0) {
           if (!directives[imageIndex].includes('https://kelosocial.sirv.com')) directives[imageIndex] += ' https://kelosocial.sirv.com'
         } else {
           directives.push("img-src 'self' data: https://kelosocial.sirv.com")
         }
-        const styleIndex = directives.findIndex((part) => /^style-src\s/i.test(part))
+        const styleIndex = directives.findIndex((part) => /^style-src\\s/i.test(part))
         if (styleIndex >= 0) {
           if (!directives[styleIndex].includes("'self'")) directives[styleIndex] += " 'self'"
         } else {
@@ -355,8 +367,9 @@ function brandNativeLoginPage(req, res, next) {
         }
         res.setHeader('Content-Security-Policy', directives.join('; '))
       }
+      output = isBuffer ? Buffer.from(branded, 'utf8') : branded
     }
-    return originalSend.call(this, output, ...args)
+    return originalEnd.call(this, output, encoding, callback)
   }
   next()
 }
