@@ -300,6 +300,11 @@ async function run() {
     )
     assert.equal(nativeBrand.status, 200)
     const nativeHtml = await nativeBrand.text()
+    assert.equal(
+      Number(nativeBrand.headers.get('content-length')),
+      Buffer.byteLength(nativeHtml, 'utf8'),
+      'Branded HTML must advertise its exact byte length to avoid corrupting HTTP keep-alive responses',
+    )
     assert.match(nativeHtml, /kelo-native-brand/)
     assert.ok(nativeHtml.includes('href="/kelo-id/login.css"'))
     assert.match(nativeHtml, /kelosocial\.sirv\.com\/logo\.png/)
