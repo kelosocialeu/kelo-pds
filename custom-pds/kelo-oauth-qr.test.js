@@ -301,7 +301,7 @@ async function run() {
     assert.equal(nativeBrand.status, 200)
     const nativeHtml = await nativeBrand.text()
     assert.match(nativeHtml, /kelo-native-brand/)
-    assert.match(nativeHtml, /href="\\/kelo-id\\/login\\.css"/)
+    assert.ok(nativeHtml.includes('href="/kelo-id/login.css"'))
     assert.match(nativeHtml, /kelosocial\.sirv\.com\/logo\.png/)
     assert.match(nativeBrand.headers.get('content-security-policy'), /kelosocial\.sirv\.com/)
     const nativeCss = await get('/kelo-id/login.css')
