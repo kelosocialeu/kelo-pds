@@ -21,8 +21,8 @@ COPY custom-mail/dist-templates/ /app/node_modules/.pnpm/@atproto+pds@0.4.219/no
 # The signing key is derived from the existing PDS_JWT_SECRET.
 # Replay markers live on the existing persistent /pds volume.
 COPY custom-pds/kelo-proof.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/account-manager/kelo-proof.js
-COPY custom-pds/kelo-oauth-qr.js /app/kelo-oauth-qr.js
-RUN node --check /app/kelo-oauth-qr.js && node -e "const router = require('/app/kelo-oauth-qr')({}); if (typeof router !== 'function') process.exit(1)"
+COPY custom-pds/kelo-oauth-qr.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/kelo-oauth-qr.js
+RUN node --check /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/kelo-oauth-qr.js && node -e "const router = require('/app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/kelo-oauth-qr')({}); if (typeof router !== 'function') process.exit(1)"
 COPY custom-pds/patch-login.js /tmp/patch-login.js
 COPY custom-pds/patch-api.js /tmp/patch-api.js
 RUN node /tmp/patch-login.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/account-manager/account-manager.js \
