@@ -17,6 +17,7 @@ async function run() {
   const express = require(expressPath)
   const createRouter = require(modulePath)
   const linkedAccounts = new Map()
+  const events = []
   const requestBindings = new Map()
   const requestParameters = new Map([
     ['urn:ietf:params:oauth:request_uri:first', {
@@ -37,10 +38,12 @@ async function run() {
     issuer: 'https://pds.kelosocial.eu',
     deviceManager: {
       async hasSession(req) {
+        events.push('hasSession')
         const cookie = String(req.headers.cookie || '')
         return cookie.includes('dev-id=') && cookie.includes('ses-id=')
       },
       async load(req, res) {
+        events.push('deviceLoad')
         const cookie = String(req.headers.cookie || '')
         const deviceId = cookie.includes('dev-id=device-2') ? 'device-2' : 'device-1'
         if (!cookie.includes('dev-id=')) {
@@ -52,6 +55,7 @@ async function run() {
     },
     requestManager: {
       async get(requestUri, deviceId, clientId) {
+        events.push('requestGet:' + requestUri)
         const entry = requestParameters.get(requestUri)
         if (!entry || entry.clientId !== clientId) throw new Error('Invalid OAuth request')
         const bound = requestBindings.get(requestUri)
@@ -62,6 +66,7 @@ async function run() {
     },
     accountManager: {
       async listDeviceAccounts(deviceId) {
+        events.push('listDeviceAccounts:' + deviceId)
         const did = linkedAccounts.get(deviceId)
         return did ? [{ account: { sub: did } }] : []
       },
@@ -74,6 +79,7 @@ async function run() {
     },
     clientManager: {
       async getClient(clientId) {
+        events.push('getClient:' + clientId)
         return { id: clientId, metadata: { client_name: 'Application de test' } }
       },
     },
@@ -89,6 +95,7 @@ async function run() {
   }
 
   const app = express()
+  app.use((req, _res, next) => { if (req.path === '/oauth/authorize') console.log('OAuth test headers', req.headers); next() })
   app.use(createRouter(ctx))
   app.get('/oauth/authorize', (_req, res) => res.status(200).send('UPSTREAM_OAUTH'))
   const server = app.listen(0, '127.0.0.1')
@@ -117,6 +124,8 @@ async function run() {
     )
     assert.equal(firstPage.status, 200)
     const firstHtml = await firstPage.text()
+    console.log('OAuth test events', events)
+    console.log('OAuth test content type', firstPage.headers.get('content-type'))
     assert.match(firstHtml, /Application de test/)
     assert.match(firstHtml, /Utiliser mon identifiant et mon mot de passe/)
     const firstToken = tokenFromHtml(firstHtml)
