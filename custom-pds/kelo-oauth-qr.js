@@ -192,6 +192,68 @@ function sendIosCookieTest(req, res, issuer) {
   res.setHeader('Set-Cookie', 'cookie-test=testing; Path=/; HttpOnly; Secure; SameSite=Lax')
   res.end('<!doctype html><html lang="fr"><meta charset="utf-8"><title>Vérification du navigateur</title><body><form id="kelo-cookie-test" method="get" action="' + action + '"></form><script>document.getElementById("kelo-cookie-test").submit()</script></body></html>')
 }
+function renderPageShell(title, content, options = {}) {
+  const logo = 'https://kelosocial.sirv.com/logo.png'
+  const keloIdLogo = 'https://kelosocial.sirv.com/logoid.png'
+  const styles = [
+    '*{box-sizing:border-box}',
+    ':root{color-scheme:light;--ink:#172033;--muted:#667085;--line:#e6eaf2;--blue:#315df5;--blue2:#7048ef;--surface:#fff;--soft:#f5f7fc}',
+    'html{min-height:100%;background:#f4f6fb}',
+    'body{margin:0;min-height:100vh;color:var(--ink);font:16px/1.55 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 12% 8%,#e7edff 0,transparent 34%),radial-gradient(ellipse at 92% 90%,#eee9ff 0,transparent 32%),#f6f8fc;display:flex;flex-direction:column;padding:clamp(14px,3vw,36px)}',
+    '.topbar{width:min(100%,1080px);margin:0 auto 22px;display:flex;align-items:center;justify-content:space-between;gap:16px}',
+    '.brand{display:inline-flex;align-items:center;gap:11px;color:var(--ink);font-weight:800;letter-spacing:-.035em;font-size:19px;text-decoration:none}',
+    '.brand img{width:42px;height:42px;object-fit:contain;border-radius:13px;filter:drop-shadow(0 5px 12px #315df51c)}',
+    '.brand small{display:block;color:var(--muted);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-top:-2px}',
+    '.secure{display:inline-flex;align-items:center;gap:7px;color:#53627b;font-size:12px;font-weight:650;background:#ffffffb8;border:1px solid #e8ebf3;border-radius:999px;padding:8px 12px}',
+    '.secure:before{content:"";width:7px;height:7px;background:#16a36a;border-radius:50%;box-shadow:0 0 0 3px #16a36a1c}',
+    '.layout{width:min(100%,1080px);margin:auto;display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,.88fr);gap:clamp(22px,4vw,52px);align-items:center}',
+    '.intro{padding:clamp(8px,2vw,28px) 0}',
+    '.eyebrow{display:inline-flex;align-items:center;gap:8px;color:var(--blue);font-size:12px;text-transform:uppercase;letter-spacing:.13em;font-weight:800}',
+    '.eyebrow:before{content:"";width:22px;height:2px;background:linear-gradient(90deg,var(--blue),var(--blue2));border-radius:9px}',
+    'h1{font-size:clamp(30px,4vw,46px);line-height:1.08;letter-spacing:-.055em;margin:15px 0 14px;font-weight:800}',
+    '.lead{font-size:clamp(15px,1.5vw,17px);color:var(--muted);max-width:490px;margin:0}',
+    '.panel{background:var(--surface);border:1px solid #e8ebf2;border-radius:26px;padding:clamp(22px,3vw,34px);box-shadow:0 24px 70px #17203312,0 3px 12px #17203308}',
+    '.choice-panel{max-width:490px;width:100%;justify-self:end}',
+    '.client{background:linear-gradient(135deg,#f7f9ff,#f5f3ff);border:1px solid #e7eafe;border-radius:16px;padding:15px 17px;margin:24px 0 20px;overflow-wrap:anywhere}',
+    '.client-label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:#77839a;font-weight:800;margin-bottom:5px}',
+    '.client strong{display:block;font-size:15px;color:#202b40}',
+    '.client-id{display:block;color:#77839a;font-size:12px;margin-top:3px;word-break:break-all}',
+    '.client-scope{margin:10px 0 0;color:#59677e;font-size:13px}',
+    '.actions{display:grid;gap:12px;margin-top:18px}',
+    '.button{width:100%;min-height:54px;display:flex;align-items:center;justify-content:center;gap:12px;padding:13px 18px;border-radius:15px;text-decoration:none;font-weight:750;font-size:15px;transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease}',
+    '.button:hover{transform:translateY(-1px)}.button:focus-visible{outline:3px solid #315df566;outline-offset:3px}',
+    '.primary{background:linear-gradient(110deg,#2563eb,#6550e9);color:white;box-shadow:0 10px 24px #315df532}',
+    '.primary:hover{box-shadow:0 13px 28px #315df545}',
+    '.secondary{background:#fff;border:1px solid #dfe4ee;color:#344054}',
+    '.secondary:hover{border-color:#b9c6e8;background:#fafbff}',
+    '.button-logo{width:27px;height:27px;object-fit:contain;border-radius:8px;background:#fff;padding:2px;flex:0 0 auto}',
+    '.button-arrow{margin-left:auto;font-size:19px;opacity:.8}',
+    '.fineprint{color:#98a2b3;font-size:12px;text-align:center;margin:18px 0 0}',
+    '.qr-panel{width:100%;max-width:520px;justify-self:end;text-align:center}',
+    '.qr-heading{font-size:19px;font-weight:800;letter-spacing:-.025em;margin:0 0 5px}',
+    '.qr-subtitle{font-size:13px;color:var(--muted);margin:0}',
+    '.qr-frame{width:min(100%,290px);aspect-ratio:1;margin:20px auto 15px;padding:12px;border:1px solid #e8ebf2;border-radius:23px;background:#fff;box-shadow:0 10px 28px #1720330d;display:grid;place-items:center}',
+    '.qr{width:100%;height:100%;object-fit:contain;image-rendering:pixelated}',
+    '.manual{background:linear-gradient(120deg,#f0f5ff,#f5f2ff);border:1px solid #e0e7ff;border-radius:17px;padding:15px 12px;margin:14px auto 0;max-width:360px}',
+    '.manual-label{display:block;color:#68758c;font-size:12px;font-weight:650}',
+    '.manual strong{display:block;font:800 clamp(21px,4vw,27px)/1.55 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.09em;color:#315df5;white-space:nowrap}',
+    '.manual small{display:block;color:#8893a7;font-size:11px}',
+    '.status{min-height:26px;margin:14px 0 4px;color:#315df5;font-size:13px;font-weight:700}',
+    '.steps{display:grid;gap:13px;margin:28px 0 0;padding:0;list-style:none;max-width:440px}',
+    '.steps li{display:flex;gap:12px;align-items:flex-start;color:#5f6c82;font-size:14px}',
+    '.step-no{display:grid;place-items:center;flex:0 0 26px;height:26px;border-radius:9px;background:#eaf0ff;color:#315df5;font-weight:800;font-size:12px}',
+    '.security-note{display:flex;gap:10px;align-items:flex-start;text-align:left;color:#7b879a;font-size:12px;line-height:1.5;margin:18px 0 0;padding-top:16px;border-top:1px solid #edf0f5}',
+    '.security-note b{color:#58667d}',
+    '.footer{width:min(100%,1080px);margin:24px auto 0;color:#a0a8b7;font-size:11px;text-align:center}',
+    '@media(max-width:760px){body{padding:14px;min-height:100svh}.topbar{margin-bottom:16px}.layout{grid-template-columns:1fr;gap:18px;width:min(100%,520px)}.intro{padding:4px 3px 0;text-align:center}.intro .lead{margin-inline:auto}.steps{margin:18px auto 0;text-align:left}.choice-panel,.qr-panel{justify-self:stretch;max-width:none}.panel{border-radius:22px;padding:22px}.brand img{width:38px;height:38px}.secure{font-size:11px;padding:7px 9px}h1{font-size:clamp(28px,8vw,36px);margin:10px 0}.qr-frame{width:min(72vw,270px);margin:15px auto 12px}.footer{margin-top:18px}}',
+    '@media(max-width:390px){body{padding:10px}.topbar{gap:8px}.brand{font-size:16px;gap:8px}.brand img{width:34px;height:34px}.secure{font-size:10px}.panel{padding:18px}.button{font-size:14px;min-height:51px}.manual strong{letter-spacing:.055em}}',
+    '@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}'
+  ].join('')
+  const header = '<header class="topbar"><a class="brand" href="https://kelosocial.eu" aria-label="Kelo Social, accueil"><img src="' + logo + '" alt="Logo Kelo Social"><span>KELO SOCIAL<small>Personal Data Server</small></span></a><span class="secure">Connexion sécurisée</span></header>'
+  const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#f4f6fb"><meta name="color-scheme" content="light"><title>' + escapeHtml(title) + '</title><style>' + styles + '</style></head><body>' + header + content + '<footer class="footer">Kelo PDS · Votre identité, vos données, votre choix.</footer></body></html>'
+  return html
+}
+
 function renderQrAuthorizationPage(res, token, record, qrDataUrl) {
   const classicUrl = '/kelo-id/oauth/continue?mode=classic&challenge=' + encodeURIComponent(token)
   const statusUrl = '/kelo-id/oauth/qr/status?challenge=' + encodeURIComponent(token)
@@ -212,23 +274,31 @@ function renderQrAuthorizationPage(res, token, record, qrDataUrl) {
     'if(data.status==="expired"||response.status===410){stopped=true;statusNode.textContent="Ce QR a expiré. Actualisez la page pour en générer un nouveau.";return;}',
     'if(!response.ok){stopped=true;statusNode.textContent=data.error||"Impossible de vérifier la demande.";return;}}catch(e){statusNode.textContent="Connexion en attente…";}setTimeout(poll,1800);}poll();',
   ].join('')
-  const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connexion Kelo PDS</title><style>' +
-    '*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#f4f6fb;color:#172033;font:16px/1.5 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:grid;place-items:center;padding:24px}.card{width:min(100%,520px);background:#fff;border:1px solid #e5e9f2;border-radius:24px;padding:32px;box-shadow:0 18px 55px #17203312;text-align:center}.brand{font-weight:750;letter-spacing:.02em;color:#315df5}.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.12em;color:#667085;font-weight:700;margin-top:20px}h1{font-size:28px;line-height:1.2;margin:8px 0 12px}.muted{color:#667085}.client{background:#f7f8fc;border-radius:14px;padding:12px;margin:18px 0;text-align:left;overflow-wrap:anywhere}.client strong{display:block}.qr{width:260px;height:260px;max-width:100%;object-fit:contain;margin:12px auto}.manual{background:#f1f5ff;border:1px solid #dce5ff;border-radius:14px;padding:14px;margin:12px auto;max-width:320px}.manual span,.manual small{display:block;color:#667085;font-size:13px}.manual strong{display:block;font:750 24px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:#315df5}.hint{font-size:14px;color:#667085}.status{min-height:26px;margin:12px 0;color:#315df5;font-weight:650}.button{display:block;text-decoration:none;border-radius:12px;padding:13px 18px;font-weight:700;margin-top:16px}.primary{background:#315df5;color:white}.secondary{border:1px solid #d9deea;color:#344054}.small{font-size:12px;color:#98a2b3;margin-top:18px}' +
-    '</style></head><body><main class="card"><div class="brand">KELO SOCIAL · PDS</div><div class="eyebrow">Authentification sécurisée</div><h1>Se connecter avec Kelo ID</h1><p class="muted">Ouvrez Kelo ID, connectez-vous si nécessaire, puis scannez ce QR code. Vérifiez le compte et l’application avant d’appuyer sur « Autoriser ».</p><div class="client"><strong>' + clientName + '</strong><span>' + clientId + '</span><p>Autorisations demandées : ' + scope + '</p></div><img class="qr" src="' + image + '" alt="QR code de connexion Kelo ID"><p class="hint">Ce QR code expire dans cinq minutes et ne peut être utilisé qu’une seule fois.</p><div class="manual"><span>Ou saisissez ce code dans Kelo ID</span><strong>' + manualCode + '</strong><small>Code à usage unique · valable cinq minutes</small></div><div id="kelo-status" class="status" role="status" aria-live="polite">En attente de votre confirmation dans Kelo ID…</div><a class="button secondary" href="' + classicUrl + '">Utiliser mon identifiant et mon mot de passe</a><p class="small">Ne scannez ce code que si vous avez lancé vous-même cette connexion.</p></main><script>' + script + '</script></body></html>'
+  const content = '<main class="layout"><section class="intro"><span class="eyebrow">Kelo ID · Autorisation</span><h1>Scannez pour vous connecter.</h1><p class="lead">Ouvrez l’application Kelo ID sur votre téléphone, puis scannez ce QR code. Vérifiez les informations avant d’autoriser la connexion.</p><ol class="steps"><li><span class="step-no">1</span><span>Ouvrez <b>Kelo ID</b> et accédez au scanner.</span></li><li><span class="step-no">2</span><span>Scannez le QR code ou saisissez le code manuel.</span></li><li><span class="step-no">3</span><span>Vérifiez le compte et l’application, puis confirmez dans Kelo ID.</span></li></ol></section><section class="panel qr-panel"><h2 class="qr-heading">Connexion avec Kelo ID</h2><p class="qr-subtitle">Scannez ce code depuis votre application mobile</p><div class="client"><div class="client-label">Application qui demande l’accès</div><strong>' + clientName + '</strong><span class="client-id">' + clientId + '</span><p class="client-scope">Autorisations demandées : ' + scope + '</p></div><div class="qr-frame"><img class="qr" src="' + image + '" alt="QR code de connexion Kelo ID"></div><p class="qr-subtitle">Ce QR code est personnel, temporaire et à usage unique.</p><div class="manual"><span class="manual-label">Vous ne pouvez pas scanner ? Saisissez ce code dans Kelo ID</span><strong>' + manualCode + '</strong><small>Code valable cinq minutes · à usage unique</small></div><div id="kelo-status" class="status" role="status" aria-live="polite">En attente de votre confirmation dans Kelo ID…</div><a class="button secondary" href="' + classicUrl + '">Utiliser identifiant et mot de passe <span class="button-arrow">→</span></a><div class="security-note"><span aria-hidden="true">ⓘ</span><span><b>Conseil de sécurité</b><br>Ne scannez ce code que si vous avez vous-même lancé cette connexion. Ne partagez jamais votre code.</span></div></section></main>'
+  const html = renderPageShell('Connexion avec Kelo ID · Kelo PDS', content)
+    .replace('</body>', '<script>' + script + '</script></body>')
   res.setHeader('Cache-Control', 'no-store, private')
   res.setHeader('Pragma', 'no-cache')
   res.setHeader('Referrer-Policy', 'no-referrer')
   res.setHeader('X-Content-Type-Options', 'nosniff')
-  res.setHeader('Content-Security-Policy', "default-src 'none'; img-src data:; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+  res.setHeader('Content-Security-Policy', "default-src 'none'; img-src data: https://kelosocial.sirv.com; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
   res.status(200).type('html').send(html)
 }
 
 function renderLoginChoicePage(res, token, record) {
   const keloUrl = '/kelo-id/oauth/qr/page?challenge=' + encodeURIComponent(token)
   const classicUrl = '/kelo-id/oauth/continue?mode=classic&challenge=' + encodeURIComponent(token)
-  const clientName = escapeHtml(record.clientName || record.clientId), clientId = escapeHtml(record.clientId), scope = escapeHtml(record.scope)
-  const html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Connexion · Kelo PDS</title><style>*{box-sizing:border-box}body{margin:0;min-height:100vh;background:#f4f6fb;color:#172033;font:16px/1.5 system-ui;display:grid;place-items:center;padding:24px}.card{width:min(100%,500px);background:#fff;border:1px solid #e5e9f2;border-radius:24px;padding:32px;box-shadow:0 18px 55px #17203312;text-align:center}.brand{font-weight:750;color:#315df5;display:flex;align-items:center;justify-content:center;gap:10px}.logo{width:34px;height:34px;object-fit:contain;border-radius:9px}h1{font-size:28px}.muted{color:#667085}.client{background:#f7f8fc;border-radius:14px;padding:12px;margin:18px 0;text-align:left;overflow-wrap:anywhere}.client strong{display:block}.button{display:block;text-decoration:none;border-radius:12px;padding:14px 18px;font-weight:700;margin-top:14px}.primary{background:#315df5;color:white}.secondary{border:1px solid #d9deea;color:#344054}</style></head><body><main class="card"><div class="brand"><img class="logo" src="https://kelosocial.sirv.com/logoid.png" alt="Kelo ID"> KELO SOCIAL · PDS</div><h1>Connexion à Kelo PDS</h1><p class="muted">Choisissez votre méthode de connexion. Vous pouvez utiliser Kelo ID ou vos identifiants habituels.</p><div class="client"><strong>' + clientName + '</strong><span>' + clientId + '</span><p>Autorisations demandées : ' + scope + '</p></div><a class="button primary" href="' + keloUrl + '">Se connecter avec Kelo ID</a><a class="button secondary" href="' + classicUrl + '">Se connecter avec identifiant et mot de passe</a></main></body></html>'
-  res.setHeader('Cache-Control', 'no-store, private'); res.setHeader('Pragma', 'no-cache'); res.setHeader('Referrer-Policy', 'no-referrer'); res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Content-Security-Policy', "default-src 'none'; img-src https://kelosocial.sirv.com; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'"); res.status(200).type('html').send(html)
+  const clientName = escapeHtml(record.clientName || record.clientId)
+  const clientId = escapeHtml(record.clientId)
+  const scope = escapeHtml(record.scope)
+  const content = '<main class="layout"><section class="intro"><span class="eyebrow">Bienvenue sur Kelo PDS</span><h1>Connectez-vous à votre espace.</h1><p class="lead">Choisissez la méthode qui vous convient. Avec Kelo ID, vous pouvez autoriser la connexion depuis votre téléphone sans saisir votre mot de passe sur cet appareil.</p><ol class="steps"><li><span class="step-no">1</span><span>Choisissez votre méthode de connexion.</span></li><li><span class="step-no">2</span><span>Vérifiez l’application qui demande l’accès.</span></li><li><span class="step-no">3</span><span>Confirmez la connexion en toute sécurité.</span></li></ol></section><section class="panel choice-panel"><span class="eyebrow">Choisir une méthode</span><h1 style="font-size:clamp(25px,3vw,32px);margin-top:12px">Comment souhaitez-vous vous connecter ?</h1><p class="lead" style="font-size:14px">Votre demande de connexion est prête.</p><div class="client"><div class="client-label">Application à connecter</div><strong>' + clientName + '</strong><span class="client-id">' + clientId + '</span><p class="client-scope">Autorisations demandées : ' + scope + '</p></div><div class="actions"><a class="button primary" href="' + keloUrl + '"><img class="button-logo" src="https://kelosocial.sirv.com/logoid.png" alt="Logo Kelo ID">Se connecter avec Kelo ID<span class="button-arrow">→</span></a><a class="button secondary" href="' + classicUrl + '">Se connecter avec identifiant et mot de passe<span class="button-arrow">→</span></a></div><p class="fineprint">La connexion Kelo ID nécessite votre validation explicite depuis l’application.</p></section></main>'
+  const html = renderPageShell('Connexion · Kelo PDS', content)
+  res.setHeader('Cache-Control', 'no-store, private')
+  res.setHeader('Pragma', 'no-cache')
+  res.setHeader('Referrer-Policy', 'no-referrer')
+  res.setHeader('X-Content-Type-Options', 'nosniff')
+  res.setHeader('Content-Security-Policy', "default-src 'none'; img-src https://kelosocial.sirv.com; style-src 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+  res.status(200).type('html').send(html)
 }
 
 function createKeloOAuthQrRouter(ctx) {
