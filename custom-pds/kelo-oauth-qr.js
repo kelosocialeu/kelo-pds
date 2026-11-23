@@ -301,23 +301,39 @@ function renderLoginChoicePage(res, token, record) {
   res.status(200).type('html').send(html)
 }
 
+const NATIVE_LOGIN_CSS = [
+  '.kelo-native-brand{display:flex;align-items:center;gap:12px;width:min(calc(100% - 32px),520px);margin:22px auto 26px;padding:13px 17px;background:#fff;border:1px solid #e6eaf2;border-radius:18px;box-shadow:0 12px 34px #17203312;color:#172033;font:800 16px/1.2 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:-.025em}',
+  '.kelo-native-brand a{display:flex;align-items:center;flex:0 0 auto}',
+  '.kelo-native-brand img{display:block;width:42px;height:42px;object-fit:contain;border-radius:12px}',
+  '.kelo-native-brand strong{display:block}',
+  '.kelo-native-brand strong span{color:#667085;font-weight:650}',
+  '@media(max-width:560px){.kelo-native-brand{width:100%;margin:0 auto 18px;padding:11px 13px;border-radius:14px}.kelo-native-brand img{width:36px;height:36px}}'
+].join('\\n')
+
 function brandNativeLoginPage(req, res, next) {
   const originalSend = res.send
   res.send = function (body, ...args) {
     let output = body
     const contentType = String(res.getHeader('Content-Type') || '')
     if (req.path === '/oauth/authorize' && typeof body === 'string' &&
-        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\b/i.test(body)) && !body.includes('kelo-native-brand')) {
+        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\\b/i.test(body)) && !body.includes('kelo-native-brand')) {
       const header = '<header class="kelo-native-brand" role="banner"><a href="https://kelosocial.eu" aria-label="Kelo Social"><img src="https://kelosocial.sirv.com/logo.png" width="42" height="42" alt="Logo Kelo Social"></a><strong>KELO SOCIAL <span>· PDS</span></strong></header>'
-      output = body.replace(/<body([^>]*)>/i, (match) => match + header)
+      output = body.replace(/<head([^>]*)>/i, (match) => match + '<link rel="stylesheet" href="/kelo-id/login.css">')
+      output = output.replace(/<body([^>]*)>/i, (match) => match + header)
       const policy = String(res.getHeader('Content-Security-Policy') || '')
       if (policy) {
         const directives = policy.split(';').map((part) => part.trim()).filter(Boolean)
-        const imageIndex = directives.findIndex((part) => /^img-src\s/i.test(part))
+        const imageIndex = directives.findIndex((part) => /^img-src\\s/i.test(part))
         if (imageIndex >= 0) {
           if (!directives[imageIndex].includes('https://kelosocial.sirv.com')) directives[imageIndex] += ' https://kelosocial.sirv.com'
         } else {
           directives.push("img-src 'self' data: https://kelosocial.sirv.com")
+        }
+        const styleIndex = directives.findIndex((part) => /^style-src\\s/i.test(part))
+        if (styleIndex >= 0) {
+          if (!directives[styleIndex].includes("'self'")) directives[styleIndex] += " 'self'"
+        } else {
+          directives.push("style-src 'self'")
         }
         res.setHeader('Content-Security-Policy', directives.join('; '))
       }
@@ -330,6 +346,10 @@ function brandNativeLoginPage(req, res, next) {
 function createKeloOAuthQrRouter(ctx) {
   const router = express.Router()
   router.use(brandNativeLoginPage)
+  router.get('/kelo-id/login.css', (_req, res) => {
+    res.setHeader('Cache-Control', 'public, max-age=3600')
+    res.type('text/css').send(NATIVE_LOGIN_CSS)
+  })
   const provider = ctx.oauthProvider
   router.use('/kelo-id', express.json({ limit: '4kb' }))
 
