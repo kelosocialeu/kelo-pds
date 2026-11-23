@@ -1,6 +1,7 @@
 'use strict'
 
 const assert = require('node:assert/strict')
+const http = require('node:http')
 const fs = require('node:fs/promises')
 const os = require('node:os')
 const path = require('node:path')
@@ -17,7 +18,6 @@ async function run() {
   const express = require(expressPath)
   const createRouter = require(modulePath)
   const linkedAccounts = new Map()
-  const events = []
   const requestBindings = new Map()
   const requestParameters = new Map([
     ['urn:ietf:params:oauth:request_uri:first', {
@@ -38,12 +38,10 @@ async function run() {
     issuer: 'https://pds.kelosocial.eu',
     deviceManager: {
       async hasSession(req) {
-        events.push('hasSession')
         const cookie = String(req.headers.cookie || '')
         return cookie.includes('dev-id=') && cookie.includes('ses-id=')
       },
       async load(req, res) {
-        events.push('deviceLoad')
         const cookie = String(req.headers.cookie || '')
         const deviceId = cookie.includes('dev-id=device-2') ? 'device-2' : 'device-1'
         if (!cookie.includes('dev-id=')) {
@@ -55,7 +53,6 @@ async function run() {
     },
     requestManager: {
       async get(requestUri, deviceId, clientId) {
-        events.push('requestGet:' + requestUri)
         const entry = requestParameters.get(requestUri)
         if (!entry || entry.clientId !== clientId) throw new Error('Invalid OAuth request')
         const bound = requestBindings.get(requestUri)
@@ -66,7 +63,6 @@ async function run() {
     },
     accountManager: {
       async listDeviceAccounts(deviceId) {
-        events.push('listDeviceAccounts:' + deviceId)
         const did = linkedAccounts.get(deviceId)
         return did ? [{ account: { sub: did } }] : []
       },
@@ -79,7 +75,6 @@ async function run() {
     },
     clientManager: {
       async getClient(clientId) {
-        events.push('getClient:' + clientId)
         return { id: clientId, metadata: { client_name: 'Application de test' } }
       },
     },
@@ -95,7 +90,6 @@ async function run() {
   }
 
   const app = express()
-  app.use((req, _res, next) => { if (req.path === '/oauth/authorize') console.log('OAuth test headers', req.headers); next() })
   app.use(createRouter(ctx))
   app.get('/oauth/authorize', (_req, res) => res.status(200).send('UPSTREAM_OAUTH'))
   const server = app.listen(0, '127.0.0.1')
@@ -105,10 +99,43 @@ async function run() {
   const browserCookie = 'dev-id=device-1; ses-id=session-1'
   const secondDeviceCookie = 'dev-id=device-2; ses-id=session-2'
   const apiHeaders = { Authorization: 'Bearer ' + process.env.PDS_KELO_ID_API_KEY }
-  const navHeaders = {}
+  const navHeaders = {
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Site': 'cross-site',
+  }
 
   async function get(pathname, options = {}) {
-    return fetch(base + pathname, { ...options, redirect: 'manual' })
+    return new Promise((resolve, reject) => {
+      const body = options.body || ''
+      const headers = { ...(options.headers || {}) }
+      if (body && !headers['Content-Length']) headers['Content-Length'] = Buffer.byteLength(body)
+      const request = http.request({
+        hostname: '127.0.0.1',
+        port: address.port,
+        path: pathname,
+        method: options.method || 'GET',
+        headers,
+      }, (response) => {
+        const chunks = []
+        response.on('data', (chunk) => chunks.push(chunk))
+        response.on('end', () => {
+          const textBody = Buffer.concat(chunks).toString('utf8')
+          const responseHeaders = response.headers
+          resolve({
+            status: response.statusCode,
+            headers: { get(name) {
+              const value = responseHeaders[String(name).toLowerCase()]
+              return Array.isArray(value) ? value.join(', ') : value || null
+            } },
+            async text() { return textBody },
+            async json() { return JSON.parse(textBody) },
+          })
+        })
+      })
+      request.on('error', reject)
+      request.end(body || undefined)
+    })
   }
   function tokenFromHtml(html) {
     const match = html.match(/status\?challenge=([A-Za-z0-9_-]{43})/)
@@ -124,8 +151,6 @@ async function run() {
     )
     assert.equal(firstPage.status, 200)
     const firstHtml = await firstPage.text()
-    console.log('OAuth test events', events)
-    console.log('OAuth test content type', firstPage.headers.get('content-type'))
     assert.match(firstHtml, /Application de test/)
     assert.match(firstHtml, /Utiliser mon identifiant et mon mot de passe/)
     const firstToken = tokenFromHtml(firstHtml)
