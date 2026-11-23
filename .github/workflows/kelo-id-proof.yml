@@ -18,5 +18,7 @@ jobs:
         run: node custom-pds/kelo-proof.test.js
       - name: Test fail-closed PDS bundle patches and intact password forwarding
         run: node custom-pds/patches.test.js
+      - name: Check Kelo OAuth QR middleware syntax
+        run: node --check custom-pds/kelo-oauth-qr.js
       - name: Build the custom image against the pinned official PDS image
         run: docker build --pull -t kelo-pds-proof-check .
