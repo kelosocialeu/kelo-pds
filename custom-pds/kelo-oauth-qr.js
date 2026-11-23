@@ -260,7 +260,16 @@ function createKeloOAuthQrRouter(ctx) {
       } else if (record.status !== 'pending') {
         return res.status(409).json({ error: 'Cette demande de connexion n’est plus active.' })
       }
-      await provider.requestManager.get(record.requestUri, record.deviceId, record.clientId)
+      const requestData = await provider.requestManager.get(record.requestUri, record.deviceId, record.clientId)
+      const localAccount = await ctx.accountManager.getAccount(did)
+      if (!localAccount || localAccount.did !== did) {
+        return res.status(403).json({ error: 'Ce compte Kelo ID n’est pas hébergé sur Kelo PDS.' })
+      }
+      if (requestData.parameters.login_hint &&
+          requestData.parameters.login_hint.toLowerCase() !== did.toLowerCase() &&
+          requestData.parameters.login_hint.toLowerCase() !== String(localAccount.handle || '').toLowerCase()) {
+        return res.status(403).json({ error: 'Cette application demande un compte différent de celui connecté à Kelo ID.' })
+      }
       const client = await provider.clientManager.getClient(record.clientId)
       return res.json({
         success: true, purpose: 'kelo_pds_oauth', status: record.status,
@@ -298,12 +307,11 @@ function createKeloOAuthQrRouter(ctx) {
         if (record.status !== 'pending') return { status: 409, error: 'Cette demande de connexion n’est plus active.' }
 
         const request = await provider.requestManager.get(record.requestUri, record.deviceId, record.clientId)
-        const accountResult = await provider.accountManager.getAccount(did)
-        const account = accountResult?.account
-        if (!account || account.sub !== did) return { status: 404, error: 'Ce compte n’existe pas sur Kelo PDS.' }
+        const account = await ctx.accountManager.getAccount(did)
+        if (!account || account.did !== did) return { status: 403, error: 'Ce compte Kelo ID n’est pas hébergé sur Kelo PDS.' }
         if (request.parameters.login_hint &&
             request.parameters.login_hint.toLowerCase() !== did.toLowerCase() &&
-            request.parameters.login_hint.toLowerCase() !== String(account.preferred_username || '').toLowerCase()) {
+            request.parameters.login_hint.toLowerCase() !== String(account.handle || '').toLowerCase()) {
           return { status: 403, error: 'Cette application demande un compte différent de celui connecté à Kelo ID.' }
         }
 
