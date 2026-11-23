@@ -5,7 +5,7 @@
 1. Une application AT Protocol redirige l'utilisateur vers le point d'autorisation OAuth de Kelo PDS.
 2. Si le navigateur ne possède pas encore de session Kelo PDS, la page présente un QR Kelo ID et conserve une option de connexion classique.
 3. L'utilisateur scanne le QR avec l'application Kelo ID existante.
-4. Kelo ID vérifie que la session est connectée et que le profil est vérifié, puis affiche le nom du client OAuth, son identifiant complet et les autorisations demandées.
+4. Kelo ID vérifie que la session est authentifiée, puis affiche le nom du client OAuth, son identifiant complet et les autorisations demandées.
 5. L'utilisateur doit appuyer explicitement sur **Autoriser** ou **Refuser**.
 6. En cas d'autorisation, le PDS associe le DID à l'appareil du navigateur qui a lancé OAuth. Le navigateur reprend ensuite la demande OAuth d'origine et le fournisseur AT Protocol termine le parcours normal (consentement et retour vers l'application cliente).
 
