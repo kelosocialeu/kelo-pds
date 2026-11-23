@@ -26,6 +26,8 @@ COPY custom-pds/kelo-oauth-qr.test.js /tmp/kelo-oauth-qr.test.js
 RUN node --check /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/kelo-oauth-qr.js && node /tmp/kelo-oauth-qr.test.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/kelo-oauth-qr.js && rm /tmp/kelo-oauth-qr.test.js
 COPY custom-pds/patch-login.js /tmp/patch-login.js
 COPY custom-pds/patch-api.js /tmp/patch-api.js
+COPY custom-pds/patch-api.test.js /tmp/patch-api.test.js
+RUN node --check /tmp/patch-api.js && node /tmp/patch-api.test.js /tmp/patch-api.js && rm /tmp/patch-api.test.js
 RUN node /tmp/patch-login.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/account-manager/account-manager.js \
     && node /tmp/patch-api.js /app/node_modules/.pnpm/@atproto+pds@0.4.219/node_modules/@atproto/pds/dist/index.js \
     && rm /tmp/patch-login.js /tmp/patch-api.js
