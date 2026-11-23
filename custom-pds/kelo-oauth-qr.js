@@ -308,7 +308,7 @@ const NATIVE_LOGIN_CSS = [
   '.kelo-native-brand strong{display:block}',
   '.kelo-native-brand strong span{color:#667085;font-weight:650}',
   '@media(max-width:560px){.kelo-native-brand{width:100%;margin:0 auto 18px;padding:11px 13px;border-radius:14px}.kelo-native-brand img{width:36px;height:36px}}'
-].join('\\n')
+].join('\n')
 
 function brandNativeLoginPage(req, res, next) {
   const originalSend = res.send
