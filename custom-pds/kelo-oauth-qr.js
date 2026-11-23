@@ -338,28 +338,28 @@ function brandNativeLoginPage(req, res, next) {
     const isBuffer = Buffer.isBuffer(chunk)
     const html = typeof chunk === 'string' ? chunk : isBuffer ? chunk.toString('utf8') : null
     if (req.path === '/oauth/authorize' && html &&
-        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\\b/i.test(html)) &&
+        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\b/i.test(html)) &&
         !html.includes('kelo-native-brand')) {
       const header = '<header class="kelo-native-brand" role="banner"><a href="https://kelosocial.eu" aria-label="Kelo Social"><img src="https://kelosocial.sirv.com/logo.png" width="42" height="42" alt="Logo Kelo Social"></a><strong>KELO SOCIAL <span>· PDS</span></strong></header>'
       let branded = html
-      if (/<head(?:\\s[^>]*)?>/i.test(branded)) {
+      if (/<head(?:\s[^>]*)?>/i.test(branded)) {
         branded = branded.replace(/<head([^>]*)>/i, (match) => match + '<link rel="stylesheet" href="/kelo-id/login.css">')
       } else {
         branded = branded.replace(/<html([^>]*)>/i, (match) => match + '<head><link rel="stylesheet" href="/kelo-id/login.css"></head>')
       }
-      if (/<body(?:\\s[^>]*)?>/i.test(branded)) {
+      if (/<body(?:\s[^>]*)?>/i.test(branded)) {
         branded = branded.replace(/<body([^>]*)>/i, (match) => match + header)
       }
       const policy = String(res.getHeader('Content-Security-Policy') || '')
       if (policy) {
         const directives = policy.split(';').map((part) => part.trim()).filter(Boolean)
-        const imageIndex = directives.findIndex((part) => /^img-src\\s/i.test(part))
+        const imageIndex = directives.findIndex((part) => /^img-src\s/i.test(part))
         if (imageIndex >= 0) {
           if (!directives[imageIndex].includes('https://kelosocial.sirv.com')) directives[imageIndex] += ' https://kelosocial.sirv.com'
         } else {
           directives.push("img-src 'self' data: https://kelosocial.sirv.com")
         }
-        const styleIndex = directives.findIndex((part) => /^style-src\\s/i.test(part))
+        const styleIndex = directives.findIndex((part) => /^style-src\s/i.test(part))
         if (styleIndex >= 0) {
           if (!directives[styleIndex].includes("'self'")) directives[styleIndex] += " 'self'"
         } else {
@@ -368,6 +368,14 @@ function brandNativeLoginPage(req, res, next) {
         res.setHeader('Content-Security-Policy', directives.join('; '))
       }
       output = isBuffer ? Buffer.from(branded, 'utf8') : branded
+      // The HTML body changes length after branding. Keep HTTP framing valid
+      // even when upstream middleware already supplied the original length.
+      const outputLength = Buffer.isBuffer(output)
+        ? output.length
+        : Buffer.byteLength(String(output), 'utf8')
+      res.removeHeader('Transfer-Encoding')
+      res.setHeader('Content-Length', String(outputLength))
+      res.removeHeader('ETag')
     }
     // Preserve Node's original end() overload and argument count. Some
     // response implementations distinguish end(chunk) from end(chunk, enc, cb).
