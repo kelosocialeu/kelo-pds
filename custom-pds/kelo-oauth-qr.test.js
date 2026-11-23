@@ -101,7 +101,7 @@ async function run() {
   app.use(createRouter(ctx))
   app.get('/oauth/authorize', (req, res) => {
     if (req.query.request_uri === 'urn:ietf:params:oauth:request_uri:native-brand') {
-      return res.type('html').set('Content-Security-Policy', \"default-src 'none'; img-src 'self'\").send('<!doctype html><html><body><form>Connexion PDS</form></body></html>')
+      return res.type('html').set('Content-Security-Policy', "default-src 'none'; img-src 'self'").send('<!doctype html><html><body><form>Connexion PDS</form></body></html>')
     }
     return res.status(200).send('UPSTREAM_OAUTH')
   })
