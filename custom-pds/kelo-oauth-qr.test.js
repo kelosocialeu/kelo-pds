@@ -98,11 +98,7 @@ async function run() {
   const browserCookie = 'dev-id=device-1; ses-id=session-1'
   const secondDeviceCookie = 'dev-id=device-2; ses-id=session-2'
   const apiHeaders = { Authorization: 'Bearer ' + process.env.PDS_KELO_ID_API_KEY }
-  const navHeaders = {
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Site': 'cross-site',
-  }
+  const navHeaders = {}
 
   async function get(pathname, options = {}) {
     return fetch(base + pathname, { ...options, redirect: 'manual' })
