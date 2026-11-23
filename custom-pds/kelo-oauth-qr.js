@@ -316,20 +316,20 @@ function brandNativeLoginPage(req, res, next) {
     let output = body
     const contentType = String(res.getHeader('Content-Type') || '')
     if (req.path === '/oauth/authorize' && typeof body === 'string' &&
-        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\\b/i.test(body)) && !body.includes('kelo-native-brand')) {
+        (contentType.includes('text/html') || /<(?:!doctype html|html|body)\b/i.test(body)) && !body.includes('kelo-native-brand')) {
       const header = '<header class="kelo-native-brand" role="banner"><a href="https://kelosocial.eu" aria-label="Kelo Social"><img src="https://kelosocial.sirv.com/logo.png" width="42" height="42" alt="Logo Kelo Social"></a><strong>KELO SOCIAL <span>· PDS</span></strong></header>'
       output = body.replace(/<head([^>]*)>/i, (match) => match + '<link rel="stylesheet" href="/kelo-id/login.css">')
       output = output.replace(/<body([^>]*)>/i, (match) => match + header)
       const policy = String(res.getHeader('Content-Security-Policy') || '')
       if (policy) {
         const directives = policy.split(';').map((part) => part.trim()).filter(Boolean)
-        const imageIndex = directives.findIndex((part) => /^img-src\\s/i.test(part))
+        const imageIndex = directives.findIndex((part) => /^img-src\s/i.test(part))
         if (imageIndex >= 0) {
           if (!directives[imageIndex].includes('https://kelosocial.sirv.com')) directives[imageIndex] += ' https://kelosocial.sirv.com'
         } else {
           directives.push("img-src 'self' data: https://kelosocial.sirv.com")
         }
-        const styleIndex = directives.findIndex((part) => /^style-src\\s/i.test(part))
+        const styleIndex = directives.findIndex((part) => /^style-src\s/i.test(part))
         if (styleIndex >= 0) {
           if (!directives[styleIndex].includes("'self'")) directives[styleIndex] += " 'self'"
         } else {
