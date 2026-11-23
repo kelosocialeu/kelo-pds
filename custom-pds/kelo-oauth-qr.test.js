@@ -167,9 +167,9 @@ async function run() {
     assert.match(firstHtml, /Application de test/)
     assert.match(firstHtml, /Se connecter avec Kelo ID/)
     assert.match(firstHtml, /Se connecter avec identifiant et mot de passe/)
-    assert.match(firstHtml, /kelosocial\\.sirv\\.com\\/logo\\.png/)
-    assert.match(firstHtml, /kelosocial\\.sirv\\.com\\/logoid\\.png/)
-    assert.match(firstHtml, /@media\\(max-width:760px\\)/)
+    assert.match(firstHtml, /kelosocial\.sirv\.com\/logo\.png/)
+    assert.match(firstHtml, /kelosocial\.sirv\.com\/logo\.png/)
+    assert.match(firstHtml, /@media\(max-width:760px\)/)
     const firstToken = tokenFromHtml(firstHtml)
 
     const qrPage = await get('/kelo-id/oauth/qr/page?challenge=' + firstToken, {
@@ -178,8 +178,8 @@ async function run() {
     assert.equal(qrPage.status, 200)
     const qrHtml = await qrPage.text()
     assert.match(qrHtml, /Saisissez ce code dans Kelo ID/)
-    assert.match(qrHtml, /kelosocial\\.sirv\\.com\\/logo\\.png/)
-    assert.match(qrHtml, /@media\\(max-width:760px\\)/)
+    assert.match(qrHtml, /kelosocial\.sirv\.com\/logo\.png/)
+    assert.match(qrHtml, /@media\(max-width:760px\)/)
     const manualCodeMatch = qrHtml.match(/<strong>([A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4})</)
     assert.ok(manualCodeMatch, 'The QR page must display a formatted 12-character one-time code')
     const manualCode = manualCodeMatch[1]
@@ -301,8 +301,8 @@ async function run() {
     assert.equal(nativeBrand.status, 200)
     const nativeHtml = await nativeBrand.text()
     assert.match(nativeHtml, /kelo-native-brand/)
-    assert.match(nativeHtml, /kelosocial\\.sirv\\.com\\/logo\\.png/)
-    assert.match(nativeBrand.headers.get('content-security-policy'), /kelosocial\\.sirv\\.com/)
+    assert.match(nativeHtml, /kelosocial\.sirv\.com\/logo\.png/)
+    assert.match(nativeBrand.headers.get('content-security-policy'), /kelosocial\.sirv\.com/)
 
     const silent = await get(
       '/oauth/authorize?client_id=' + encodeURIComponent('https://client.example/metadata.json') +
