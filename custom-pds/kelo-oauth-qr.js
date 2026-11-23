@@ -185,7 +185,7 @@ function renderAuthorizationPage(res, token, record, qrDataUrl) {
     'const resumeUrl=' + JSON.stringify(resumeUrl) + ';',
     'const statusNode=document.getElementById("kelo-status");',
     'let stopped=false;',
-    'async function poll(){if(stopped)return;try{const response=await fetch(statusUrl,{cache:"no-store",credentials:"same-origin"});const data=await response.json();',
+    'async function poll(){if(stopped)return;try{const response=await fetch(statusUrl,{cache:"no-store",credentials:"same-origin"});const data=await response.json().catch(()=>({}));',
     'if(data.status==="approved"){stopped=true;statusNode.textContent="Connexion autorisée. Finalisation…";window.location.replace(resumeUrl);return;}',
     'if(data.status==="denied"||data.status==="cancelled"){stopped=true;statusNode.textContent="Demande refusée ou annulée. Vous pouvez utiliser la connexion classique.";return;}',
     'if(data.status==="expired"||response.status===410){stopped=true;statusNode.textContent="Ce QR a expiré. Actualisez la page pour en générer un nouveau.";return;}',
