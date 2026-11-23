@@ -300,10 +300,10 @@ function createKeloOAuthQrRouter(ctx) {
         const request = await provider.requestManager.get(record.requestUri, record.deviceId, record.clientId)
         const accountResult = await provider.accountManager.getAccount(did)
         const account = accountResult?.account
-        if (!account || account.did !== did) return { status: 404, error: 'Ce compte n’existe pas sur Kelo PDS.' }
+        if (!account || account.sub !== did) return { status: 404, error: 'Ce compte n’existe pas sur Kelo PDS.' }
         if (request.parameters.login_hint &&
             request.parameters.login_hint.toLowerCase() !== did.toLowerCase() &&
-            request.parameters.login_hint.toLowerCase() !== String(account.handle || '').toLowerCase()) {
+            request.parameters.login_hint.toLowerCase() !== String(account.preferred_username || '').toLowerCase()) {
           return { status: 403, error: 'Cette application demande un compte différent de celui connecté à Kelo ID.' }
         }
 
