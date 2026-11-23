@@ -5,6 +5,9 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 const express = require('express')
 const QRCode = require('/opt/kelo-pds-qrcode/node_modules/qrcode')
+const oauthProviderEntry = require.resolve('@atproto/oauth-provider', { paths: [__dirname] })
+const oauthTypesPath = require.resolve('@atproto/oauth-types', { paths: [path.dirname(oauthProviderEntry)] })
+const { oauthAuthorizationRequestQuerySchema } = require(oauthTypesPath)
 
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
 const TOKEN_TTL_MS = 5 * 60 * 1000
@@ -211,9 +214,11 @@ function createKeloOAuthQrRouter(ctx) {
     try {
       if (!provider || !validateBrowserNavigation(req, provider.issuer)) return next()
       const query = new URL(req.originalUrl, provider.issuer).searchParams
-      const clientId = query.get('client_id')
-      const requestUri = query.get('request_uri')
-      if (!clientId || !requestUri || query.getAll('client_id').length !== 1 || query.getAll('request_uri').length !== 1) return next()
+      if (query.getAll('client_id').length !== 1 || query.getAll('request_uri').length !== 1) return next()
+      const parsedQuery = oauthAuthorizationRequestQuerySchema.safeParse(Object.fromEntries(query.entries()))
+      if (!parsedQuery.success) return next()
+      const clientId = parsedQuery.data.client_id
+      const requestUri = parsedQuery.data.request_uri
 
       if (String(req.headers['user-agent'] || '').includes('iPhone OS') &&
           readCookie(req, 'cookie-test') !== 'succeeded' &&
