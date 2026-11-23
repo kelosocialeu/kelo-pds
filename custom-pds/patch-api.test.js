@@ -9,7 +9,7 @@ const path = require('node:path')
 const patchScript = path.resolve(process.argv[2] || path.join(__dirname, 'patch-api.js'))
 const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kelo-patch-api-'))
 
-function runFixture(name, compressionCall) {
+function runFixture(name, compressionCall, authCall = 'authRoutes.createRouter(ctx)') {
   const target = path.join(tempDir, name + '.js')
   const fixture = [
     "'use strict';",
@@ -19,7 +19,7 @@ function runFixture(name, compressionCall) {
     'const app = express();',
     'app.use(loggerMiddleware);',
     'app.use(' + compressionCall + ');',
-    'app.use(authRoutes.createRouter(ctx));',
+    'app.use(' + authCall + ');',
     'app.use(cors());',
     '',
   ].join('\n')
@@ -33,7 +33,7 @@ function runFixture(name, compressionCall) {
   const patched = fs.readFileSync(target, 'utf8')
   const marker = patched.indexOf('Kelo ID proof issuer. This route is server-to-server only.')
   const compression = patched.indexOf('app.use(' + compressionCall + ');')
-  const auth = patched.indexOf('app.use(authRoutes.createRouter(ctx));')
+  const auth = patched.indexOf('app.use(' + authCall + ');')
   assert.ok(marker > compression, name + ': Kelo middleware must be registered after compression')
   assert.ok(marker < auth, name + ': Kelo middleware must be registered before OAuth/auth routes')
   assert.equal(patched.split('Kelo ID proof issuer. This route is server-to-server only.').length - 1, 1)
@@ -42,6 +42,7 @@ function runFixture(name, compressionCall) {
 try {
   runFixture('typescript-commonjs', '(0, compression_1.default)()')
   runFixture('typescript-commonjs-direct', 'compression_1.default()')
+  runFixture('typescript-namespace-import', '(0, util_compression_1.default)()', '(0, auth_routes_1.createRouter)(ctx)')
   console.log('Kelo patch-api middleware-order tests passed')
 } finally {
   fs.rmSync(tempDir, { recursive: true, force: true })
