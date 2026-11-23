@@ -9,6 +9,7 @@ const QRCode = require('/opt/kelo-pds-qrcode/node_modules/qrcode')
 const TOKEN_PATTERN = /^[A-Za-z0-9_-]{43}$/
 const TOKEN_TTL_MS = 5 * 60 * 1000
 const COOKIE_NAME = 'kelo-oauth-bypass'
+let lastPruneAt = 0
 
 function sha256(value) {
   return crypto.createHash('sha256').update(value, 'utf8').digest('hex')
@@ -65,6 +66,21 @@ function escapeHtml(value) {
 async function ensureDirectory() {
   const directory = dataDirectory()
   await fs.mkdir(directory, { recursive: true, mode: 0o700 })
+  if (Date.now() - lastPruneAt > 10 * 60 * 1000) {
+    lastPruneAt = Date.now()
+    try {
+      const entries = await fs.readdir(directory)
+      for (const name of entries) {
+        if (!name.endsWith('.json') && !name.endsWith('.lock')) continue
+        const file = path.join(directory, name)
+        const stat = await fs.stat(file).catch(() => null)
+        const maxAge = name.endsWith('.lock') ? 15 * 60 * 1000 : 24 * 60 * 60 * 1000
+        if (stat && Date.now() - stat.mtimeMs > maxAge) await fs.unlink(file).catch(() => {})
+      }
+    } catch {
+      // A cleanup failure must not interrupt a valid OAuth authorization.
+    }
+  }
   return directory
 }
 async function atomicWrite(file, value) {
