@@ -306,7 +306,11 @@ async function run() {
     assert.match(nativeBrand.headers.get('content-security-policy'), /kelosocial\.sirv\.com/)
     const nativeCss = await get('/kelo-id/login.css')
     assert.equal(nativeCss.status, 200)
-    assert.match(await nativeCss.text(), /kelo-native-brand/)
+    const nativeCssText = await nativeCss.text()
+    assert.match(nativeCssText, /kelo-native-brand/)
+    assert.match(nativeCssText, /body:has\(form\)/, 'The native password form must receive Kelo styling')
+    assert.match(nativeCssText, /linear-gradient\(110deg,#2563eb,#7048ef\)/, 'The native submit button must use Kelo branding')
+    assert.match(nativeCssText, /prefers-reduced-motion/, 'The native login page must respect reduced-motion preferences')
 
     const silent = await get(
       '/oauth/authorize?client_id=' + encodeURIComponent('https://client.example/metadata.json') +
